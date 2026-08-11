@@ -1,0 +1,14 @@
+[
+  {"id":"fb-001","persona":"Operations manager","account_tier":"Enterprise","text":"Every Monday I manually export a CSV for our regional review. Scheduled exports would save me two hours.","severity":5,"received_at":"2026-07-01","synthetic":true},
+  {"id":"fb-002","persona":"Data analyst","account_tier":"Growth","text":"CSV export works, but I need a recurring export to refresh our finance workbook.","severity":4,"received_at":"2026-07-03","synthetic":true},
+  {"id":"fb-003","persona":"Support lead","account_tier":"Enterprise","text":"Scheduled report export is one of our most repeated feature requests this quarter.","severity":5,"received_at":"2026-07-05","synthetic":true},
+  {"id":"fb-004","persona":"Executive sponsor","account_tier":"Enterprise","text":"Our board packet needs the same analytics every month. Automated CSV delivery would remove an operational risk.","severity":5,"received_at":"2026-07-07","synthetic":true},
+  {"id":"fb-005","persona":"Product analyst","account_tier":"Growth","text":"I can export manually today. Faster filtering matters more than automation for me.","severity":2,"received_at":"2026-07-08","synthetic":true},
+  {"id":"fb-006","persona":"Operations manager","account_tier":"Starter","text":"I would like email alerts when an important metric changes.","severity":3,"received_at":"2026-07-09","synthetic":true},
+  {"id":"fb-007","persona":"Support lead","account_tier":"Growth","text":"Customers ask for better PDF layouts, not only CSV files.","severity":2,"received_at":"2026-07-10","synthetic":true},
+  {"id":"fb-008","persona":"Security admin","account_tier":"Enterprise","text":"Any export automation needs audit logs and role-based access.","severity":4,"received_at":"2026-07-11","synthetic":true},
+  {"id":"fb-009","persona":"Data analyst","account_tier":"Starter","text":"A CSV export is enough for the one report I prepare each month.","severity":2,"received_at":"2026-07-12","synthetic":true},
+  {"id":"fb-010","persona":"Customer success manager","account_tier":"Growth","text":"Bulk export would make quarterly business reviews easier to prepare.","severity":3,"received_at":"2026-07-13","synthetic":true},
+  {"id":"fb-011","persona":"Engineering manager","account_tier":"Enterprise","text":"Please expose an API before a scheduled export feature; our team can automate it ourselves.","severity":3,"received_at":"2026-07-14","synthetic":true},
+  {"id":"fb-012","persona":"Operations director","account_tier":"Enterprise","text":"We nearly missed a compliance deadline because someone forgot the weekly CSV export. We need it scheduled with an audit trail.","severity":5,"received_at":"2026-07-15","synthetic":true}
+]
