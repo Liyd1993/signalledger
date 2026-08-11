@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from signalledger.data import load_feedback
 from signalledger.decision_engine import decide
+from signalledger.strands_agent import run_agent_analysis
 
 ROOT = Path(__file__).parent
 DB_PATH = Path(".local/signalledger.db")
@@ -143,6 +144,21 @@ def analyze(request: AnalysisRequest) -> dict[str, str]:
         db.execute("INSERT INTO decisions VALUES (?, ?, ?, 'current', '')", (decision_id, request.question, json.dumps(result.__dict__)))
     save_task(task_id, payload)
     return {"task_id": task_id, "status": "queued"}
+
+
+@app.post("/api/agent-analysis")
+def agent_analyze(request: AnalysisRequest) -> dict[str, object]:
+    try:
+        result = run_agent_analysis(request.question, all_feedback())
+    except RuntimeError as error:
+        raise HTTPException(503, str(error)) from error
+    decision_id = str(uuid.uuid4())
+    if not os.getenv("DATABASE_URL"):
+        with connection() as db:
+            db.execute("UPDATE decisions SET status = 'superseded' WHERE question = ? AND status = 'current'", (request.question,))
+            db.execute("INSERT INTO decisions VALUES (?, ?, ?, 'current', '')", (decision_id, request.question, json.dumps(result["recommendation"])))
+    result["decision_id"] = decision_id
+    return result
 
 
 @app.get("/api/analysis/{task_id}")

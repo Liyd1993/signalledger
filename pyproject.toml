@@ -8,6 +8,7 @@ dependencies = [
   "fastapi>=0.115,<1",
   "mangum>=0.19,<1",
   "psycopg[binary]>=3.2,<4",
+  "strands-agents[ollama]>=1.36,<2",
   "uvicorn>=0.30,<1",
 ]
 

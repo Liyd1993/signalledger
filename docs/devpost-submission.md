@@ -2,39 +2,37 @@
 
 ## Inspiration
 
-Product decisions usually disappear into a mix of calls, spreadsheets, and one-off summaries. Months later, teams cannot explain why they chose to build something—or whether the evidence has changed. We built SignalLedger to give product managers durable, inspectable memory for customer signals and the decisions made from them.
+Product teams receive feedback everywhere, but decisions often outlive the evidence behind them. SignalLedger gives product managers a small, inspectable agent that can turn a roadmap question into a cited recommendation and a concrete next validation step.
 
 ## What it does
 
-SignalLedger ingests synthetic customer feedback, retrieves the evidence most relevant to a product question, and creates a recommendation with citations and a measurable validation experiment. It saves that decision as a memory record. When a new enterprise signal arrives, it marks the existing decision for review so the next analysis explains what changed.
-
-Our demo asks: **Should we build scheduled CSV exports?** The agent finds recurring, high-severity feedback across operations, support, analysts, and compliance. It recommends building a constrained first version with audit logs and a five-account validation metric. When new compliance feedback appears, the decision history records why the existing conclusion needs review.
+Ask “Should we build scheduled CSV exports?” SignalLedger's Strands agent first retrieves the most relevant synthetic feedback, then calls a separate decision tool. The result cites the exact feedback IDs, recommends either `build_now` or `validate_first`, and gives a measurable experiment. New synthetic feedback flags the current decision for review, so the next run has to account for what changed.
 
 ## How we built it
 
-SignalLedger uses CockroachDB as its persistent memory layer for feedback, evidence links, asynchronous task state, and decision history. We use CockroachDB Distributed Vector Indexing for semantic retrieval of feedback, and CockroachDB Cloud Managed MCP Server as the agent's read-only, auditable memory-query boundary.
+SignalLedger is a Python/FastAPI app using the Strands Agents SDK. Its local `gemma4:12b` Ollama model plans a two-tool workflow: `retrieve_feedback` is read-only and limited to four synthetic records; `create_decision` runs a transparent, deterministic policy and returns the evidence-backed outcome. The UI shows the provider, model, and tools used for each run rather than hiding the agent behind a generic chat interface.
 
-The deployment runs the application on AWS Lambda, stores the synthetic source set in Amazon S3, and can use Amazon Bedrock to generate grounded recommendation wording. The deterministic decision policy remains responsible for status and evidence selection so every conclusion is traceable.
+All demonstration data is synthetic. The project requires no cloud account, payment method, API key, external connector, browser, shell, or file-writing tool.
 
 ## Challenges we ran into
 
-The key product challenge was avoiding a generic chatbot. We made “not enough evidence” a first-class outcome: the agent will return `validate_first` rather than confidently inventing a roadmap answer when it cannot cite at least two relevant signals.
+We wanted the project to be agentic without allowing the model to invent product evidence or take irreversible actions. The narrow tools and the deterministic decision policy make the model's role visible: it chooses and executes the workflow, while the product rules remain replayable.
 
 ## Accomplishments that we're proud of
 
-- A complete feedback → evidence → decision → re-evaluation loop in one compact demo.
-- Clear separation between raw feedback, semantic memory, and decision memory.
-- Decisions become living records instead of stale summaries.
-- A synthetic-only data boundary suitable for a public hackathon repository.
+- A genuine local Strands + Ollama tool-use path, not a chatbot mock-up.
+- An evidence → decision → review loop that a product manager can understand in one screen.
+- Synthetic-only data and zero paid/cloud prerequisites.
+- The agent can deliberately return `validate_first` when evidence is weak.
 
 ## What we learned
 
-Persistent memory is most useful when it captures not only facts, but also the reasoning and uncertainty behind a decision. The best agentic product behavior is often knowing when to ask for validation rather than producing a stronger-sounding answer.
+For professional work, trust comes from bounded autonomy. A useful product agent should show the data boundary, the tools it used, and the decision rule—not merely produce fluent prose.
 
 ## What's next
 
-We would add role-aware connectors for research transcripts and support tools, decision ownership, and explicit human approval workflows—without allowing the agent to take irreversible roadmap actions.
+We would add approved connectors for support and interview repositories, per-product access controls, and a human approval queue before any real roadmap action.
 
 ## Built with
 
-CockroachDB Cloud, CockroachDB Distributed Vector Indexing, CockroachDB Managed MCP Server, AWS Lambda, Amazon S3, Amazon Bedrock, FastAPI, Python, vanilla JavaScript.
+Strands Agents SDK, Ollama, Gemma 4, FastAPI, Python, SQLite, vanilla JavaScript.

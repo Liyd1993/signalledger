@@ -2,15 +2,17 @@
 
 ```mermaid
 flowchart LR
-  U[Product manager] --> W[SignalLedger web dashboard]
-  W --> A[FastAPI on AWS Lambda]
-  A --> S3[Amazon S3: synthetic source feedback]
-  A --> B[Amazon Bedrock: grounded wording]
-  A --> DB[(CockroachDB: feedback, vector memory, decisions)]
-  A --> MCP[CockroachDB Managed MCP Server: read-only memory queries]
-  MCP --> DB
+  PM[Product manager] --> UI[SignalLedger dashboard]
+  UI --> API[FastAPI]
+  API --> SA[Strands Agent SDK]
+  SA --> O[Local Ollama: gemma4:12b]
+  SA --> R[retrieve_feedback tool]
+  SA --> D[create_decision tool]
+  R --> F[Synthetic feedback]
+  D --> P[Transparent decision policy]
+  API --> L[(Local decision ledger)]
 ```
 
-The application writes feedback, task state, decisions, and evidence links into CockroachDB. Semantic retrieval uses the `feedback_items.embedding` vector index. The agent uses the Managed MCP Server as a read-only, auditable memory boundary; its application identity retains separate least-privilege write access for explicit feedback and decision records.
+The Strands agent has exactly two custom tools. `retrieve_feedback` returns at most four synthetic feedback records relevant to the question. `create_decision` applies the deterministic policy, cites those records, and creates either a build recommendation or a measurable validation experiment.
 
-Amazon S3 stores the synthetic seed set and Lambda hosts the API. Bedrock may rewrite only the recommendation wording after evidence is selected; it is not allowed to add evidence or change the deterministic decision state.
+The model is local Ollama at `http://127.0.0.1:11434`; no AWS account, cloud credentials, API key, customer connector, shell tool, or browsing tool is used. FastAPI retains the decision history and rejects feedback that is not explicitly marked synthetic.

@@ -1,45 +1,42 @@
 # SignalLedger
 
-SignalLedger is an evidence-backed product-decision agent. It turns synthetic customer feedback into a recommendation, stores the evidence and rationale as durable memory, and flags an earlier decision when new evidence should change it.
+SignalLedger is a local Strands agent for product-feedback triage. It turns a product question into a cited recommendation and a measurable validation experiment.
 
-> This repository and its demo records contain **synthetic data only**. Do not add employer, customer, or personal data.
+> This repository and every demo record contain **synthetic data only**. Do not add employer, customer, or personal data.
 
-## Why it is agentic
+## How it is agentic
 
-For each question, SignalLedger retrieves relevant feedback, evaluates whether there is sufficient evidence, produces a validation experiment, and writes a durable decision record. New feedback marks active decisions for review, so the next run explains what changed instead of pretending every question starts from zero.
+The FastAPI endpoint creates a Strands `Agent` backed by local Ollama (`gemma4:12b`). The agent has only two custom tools:
 
-## CockroachDB × AWS Hackathon requirements
+1. `retrieve_feedback` — returns at most four relevant synthetic feedback records.
+2. `create_decision` — runs the transparent policy, cites feedback IDs, and returns `build_now` or `validate_first`.
 
-- **CockroachDB persistent memory:** feedback, task state, decisions, and evidence references are durable tables.
-- **CockroachDB Distributed Vector Indexing:** `migrations/001_schema.sql` defines a vector column and HNSW index for semantic feedback retrieval.
-- **CockroachDB Managed MCP Server:** set `COCKROACH_MCP_URL` to the read-only managed endpoint. The deployment uses it as the agent's auditable memory-query boundary; application writes remain least-privilege database operations.
-- **AWS:** the AWS SAM template deploys the service as Lambda and limits it to read-only access to the S3 seed-data bucket. Bedrock is the optional wording model in production; the local deterministic policy keeps the demo repeatable.
+The agent must call retrieval before decision. If it skips the required tool, the API returns an error instead of pretending an analysis happened. It has no browser, shell, file-editing, customer-data, cloud, or remote connector tools.
 
 ## Run locally
 
+Prerequisites: Python 3.11+, [Ollama](https://ollama.com/), and the `gemma4:12b` model.
+
 ```bash
+ollama serve
+ollama pull gemma4:12b
 uv sync --dev
 uv run pytest -q
 uv run uvicorn signalledger.app:app --reload
 ```
 
-Open http://127.0.0.1:8000. Click **Analyze scheduled exports**, then **Add new enterprise evidence**, and run the analysis again. The decision history shows the durable memory lifecycle.
+Open http://127.0.0.1:8000. Click **Run the feedback agent**, then **Add new enterprise evidence**, and run the agent again. The history shows why the earlier decision needs review.
 
-## Deploy
+## No paid or cloud setup
 
-1. Create a CockroachDB Cloud cluster and apply `migrations/001_schema.sql`.
-2. Create a read-only CockroachDB Cloud Managed MCP Server endpoint and save its URL as `COCKROACH_MCP_URL`.
-3. Create an S3 bucket, upload `data/feedback.json`, and deploy:
+SignalLedger runs with a local Ollama model. It needs no AWS account, credit card, cloud database, API key, or production deployment for the demo.
 
-```bash
-sam build
-sam deploy --guided
-```
+## Demo question
 
-Supply the CockroachDB connection as the `DatabaseUrl` parameter and the S3 bucket as `SeedBucket`. Do not commit either value. Capture the Cloud console, Lambda configuration, CockroachDB vector query, and MCP invocation in the demo video.
+“Should we build scheduled CSV exports?”
 
-## Product demonstration
+The agent retrieves recurring high-severity reporting feedback and recommends a constrained version with audit logs for five enterprise accounts. The validation metric is a 50% reduction in manual export time.
 
-Question: “Should we build scheduled CSV exports?”
+## Hackathon entry
 
-SignalLedger initially recommends building because it finds multiple high-severity, enterprise feedback records. A new compliance request is then imported; the prior decision is marked for review, and a re-run produces a new decision based on the expanded evidence ledger.
+Built for the Agents for Humans Hackathon, Professional Agents track. See [`docs/architecture.md`](docs/architecture.md), [`docs/devpost-submission.md`](docs/devpost-submission.md), and [`docs/demo-script.md`](docs/demo-script.md) for the architecture, Devpost copy, and recording script.
