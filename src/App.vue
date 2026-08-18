@@ -66,7 +66,7 @@ selectTrack(selectedTrack.value)
       </div><p class="home-note">不需要组织得很好。说出一个片段，也可以。</p>
     </section>
 
-    <section v-else-if="page === 'chat' && !report" class="conversation-card" aria-label="对话">
+    <section v-else-if="page === 'chat' && !report" class="conversation-card" :class="{ 'has-messages': messages.length }" aria-label="对话">
       <button class="back-button" type="button" @click="go('home')">← 返回首页</button>
       <header class="hero"><div class="mark">✦</div><p class="eyebrow">ECHO REPORT</p><h1>把现在的心情，<br />慢慢说出来</h1><p class="subhead">这是一次非医疗的自我反思对话。</p></header>
       <div class="progress-card"><div><span>对话进度</span><strong>{{ userMessageCount }} <small>/ 10</small></strong></div><p v-if="messagesToReport">再写 {{ messagesToReport }} 段表达，即可生成专属报告</p><p v-else>你已积累足够的表达，可以生成一份回顾报告。</p></div>
