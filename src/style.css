@@ -1,0 +1,86 @@
+:root {
+  color: #302b2b;
+  background: #fcf8f5;
+  font-family: ui-rounded, "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, input { font: inherit; }
+button { cursor: pointer; }
+
+.app-shell {
+  min-height: 100vh;
+  padding: 24px 16px 48px;
+  background:
+    radial-gradient(circle at 8% 2%, #f7dfdc 0 14%, transparent 32%),
+    radial-gradient(circle at 96% 42%, #dcefe6 0 12%, transparent 30%),
+    #fcf8f5;
+}
+
+.conversation-card, .report-card {
+  width: min(100%, 560px);
+  margin: 0 auto;
+  padding: 26px 20px;
+  border: 1px solid rgb(255 255 255 / 92%);
+  border-radius: 32px;
+  background: rgb(255 255 255 / 70%);
+  box-shadow: 0 18px 60px rgb(92 65 52 / 12%);
+  backdrop-filter: blur(18px);
+}
+
+.hero { text-align: center; padding: 6px 0 20px; }
+.mark { color: #af814d; font-size: 25px; }
+.eyebrow { margin: 7px 0; color: #aa7a46; font-size: 11px; font-weight: 800; letter-spacing: .14em; }
+h1 { margin: 7px 0 10px; font-size: clamp(28px, 8vw, 38px); line-height: 1.2; letter-spacing: -.06em; }
+.subhead, .report-hero > p { margin: 0; color: #786f6d; font-size: 13px; }
+
+.progress-card {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border-radius: 22px;
+  background: linear-gradient(120deg, rgb(255 224 219 / 78%), rgb(232 246 239 / 72%));
+}
+.progress-card > div { display: flex; align-items: baseline; justify-content: space-between; }
+.progress-card span, .progress-card p { color: #716a67; font-size: 13px; }
+.progress-card strong { color: #4d3d37; font-size: 28px; }
+.progress-card small { color: #867873; font-size: 14px; }
+.progress-card p { margin: 0; }
+
+.transcript { display: grid; gap: 12px; min-height: 230px; padding: 24px 0; }
+.empty-state { align-self: center; margin: 0; color: #978e89; text-align: center; font-size: 14px; }
+.message { max-width: 82%; padding: 12px 14px; border-radius: 18px; line-height: 1.55; font-size: 15px; }
+.message.user { justify-self: end; border-bottom-right-radius: 4px; background: #f4d8d1; }
+.message.assistant { justify-self: start; border-bottom-left-radius: 4px; background: #eaf3ed; }
+
+.report-cta {
+  width: 100%; margin: 0 0 14px; padding: 17px 18px; border: 0; border-radius: 18px;
+  color: white; font-weight: 800; letter-spacing: .02em;
+  background: linear-gradient(115deg, #bd526d, #db9149);
+  box-shadow: 0 12px 22px rgb(190 91 83 / 27%);
+}
+.report-cta span { margin-right: 4px; color: #ffe6ae; }
+
+.composer { display: flex; gap: 8px; align-items: center; padding: 8px; border: 1px solid #eee1da; border-radius: 18px; background: #fffdfb; }
+.composer input { min-width: 0; flex: 1; padding: 9px 8px; border: 0; outline: 0; background: transparent; color: #302b2b; }
+.composer button { padding: 9px 13px; border: 0; border-radius: 12px; color: #fff; background: #806752; }
+.composer button:disabled { cursor: not-allowed; opacity: .38; }
+
+.crisis-card { display: flex; gap: 12px; margin-bottom: 14px; padding: 16px; border: 1px solid #e2b9a8; border-radius: 20px; background: #fff0e8; }
+.crisis-card > span { color: #ba6049; font-size: 20px; }
+.crisis-card strong { color: #7d392d; }
+.crisis-card p { margin: 6px 0 0; color: #704f48; font-size: 13px; line-height: 1.55; }
+
+.back-button { padding: 0; border: 0; background: none; color: #75665f; }
+.report-hero { padding: 28px 0 22px; text-align: center; }
+.report-hero > span { color: #c58c4f; font-size: 25px; }
+.report-hero h1 { font-size: clamp(27px, 7vw, 36px); }
+.report-section { margin: 12px 0; padding: 17px; border-radius: 20px; background: linear-gradient(120deg, #fff7f4, #f6fbf7); }
+.report-section h2 { margin: 0 0 8px; color: #8e613e; font-size: 14px; }
+.report-section p { margin: 0; line-height: 1.7; font-size: 14px; }
+.evidence blockquote { margin: 10px 0 0; padding-left: 11px; border-left: 2px solid #d5ae83; color: #5c524e; font-size: 14px; line-height: 1.55; }
+.report-disclaimer { margin: 22px 4px 0; color: #938984; font-size: 11px; line-height: 1.6; text-align: center; }
+
+@media (min-width: 640px) { .app-shell { padding-top: 48px; } .conversation-card, .report-card { padding: 32px; } }
