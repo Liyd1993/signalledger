@@ -24,6 +24,7 @@ const currentTime = ref(0)
 const duration = ref(18)
 const messagesToReport = computed(() => Math.max(unlockAt.value - userMessageCount.value, 0))
 const introShift = ref(0)
+const transcriptHeight = computed(() => 360 + introShift.value)
 
 function go(next: Page) { report.value = null; page.value = next }
 function send() { conversation.send(draft.value); draft.value = '' }
@@ -81,7 +82,7 @@ selectTrack(selectedTrack.value)
         <header class="hero"><div class="mark">✦</div><p class="eyebrow">ECHO REPORT</p><h1>把现在的心情，<br />慢慢说出来</h1><p class="subhead">这是一次非医疗的自我反思对话。</p></header>
         <div class="progress-card"><div><span>对话进度</span><strong>{{ userMessageCount }} <small>/ 10</small></strong></div><p v-if="messagesToReport">再写 {{ messagesToReport }} 段表达，即可生成专属报告</p><p v-else>你已积累足够的表达，可以生成一份回顾报告。</p></div>
       </div>
-      <div ref="transcript" class="transcript" aria-live="polite"><p v-if="!messages.length" class="empty-state">从此刻最想说的一件小事开始也可以。</p><div v-for="message in messages" :key="message.id" class="message" :class="message.role"><img v-if="message.kind === 'image' && message.imageUrl" :src="message.imageUrl" :alt="message.text || '用户上传的图片'" /><template v-else>{{ message.text }}</template></div></div>
+      <div ref="transcript" class="transcript" :style="{ height: `${transcriptHeight}px` }" aria-live="polite"><p v-if="!messages.length" class="empty-state">从此刻最想说的一件小事开始也可以。</p><div v-for="message in messages" :key="message.id" class="message" :class="message.role"><img v-if="message.kind === 'image' && message.imageUrl" :src="message.imageUrl" :alt="message.text || '用户上传的图片'" /><template v-else>{{ message.text }}</template></div></div>
       <aside v-if="crisisActive" class="crisis-card" role="alert"><span>✦</span><div><strong>你现在的安全最重要</strong><p>请优先联系身边可信任的人、当地紧急服务，或中国心理援助热线 12356。</p></div></aside>
       <button v-else-if="canCreateReport" class="report-cta" type="button" @click="openReport"><span>✦</span> 生成我的专属报告</button>
       <div v-if="pendingImage" class="image-preview"><img :src="pendingImage" :alt="pendingImageName" /><span>{{ pendingImageName }}</span><button type="button" class="text-button" @click="pendingImage = null">移除</button><button type="button" class="send-image" @click="sendImage">发送图片</button></div>
