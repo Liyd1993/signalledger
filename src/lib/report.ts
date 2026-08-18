@@ -10,8 +10,8 @@ function chooseTitle(text: string) {
 
 export function createReport(messages: Message[]): ReflectionReport {
   const evidence = messages
-    .filter((message) => message.role === 'user')
-    .map((message) => message.text)
+    .filter((message) => message.role === 'user' && message.kind === 'text')
+    .map((message) => message.text ?? '')
     .filter(Boolean)
     .slice(-3)
   const source = evidence.join(' ')

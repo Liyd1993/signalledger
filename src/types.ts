@@ -3,7 +3,9 @@ export type Role = 'user' | 'assistant'
 export type Message = {
   id: string
   role: Role
-  text: string
+  kind: 'text' | 'image'
+  text?: string
+  imageUrl?: string
 }
 
 export type ReflectionReport = {

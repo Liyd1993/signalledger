@@ -26,4 +26,11 @@ describe('conversation gate', () => {
     expect(conversation.crisisActive.value).toBe(true)
     expect(conversation.canCreateReport.value).toBe(false)
   })
+
+  it('adds an image without increasing the text-message count', () => {
+    const conversation = createConversation()
+    conversation.sendImage('data:image/png;base64,AA==', '心情图片.png')
+    expect(conversation.userMessageCount.value).toBe(0)
+    expect(conversation.messages.value[0]).toMatchObject({ role: 'user', kind: 'image' })
+  })
 })
