@@ -15,3 +15,9 @@ export type ReflectionReport = {
   nextStep: string
   nextQuestion: string
 }
+
+export type ArchivedReport = ReflectionReport & {
+  id: string
+  createdAt: string
+  summary: string
+}
