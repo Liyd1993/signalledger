@@ -112,4 +112,7 @@ h1 { margin: 7px 0 10px; font-size: clamp(28px, 8vw, 38px); line-height: 1.2; le
 .now-playing { display: flex; gap: 14px; align-items: center; padding: 19px; border-radius: 23px; background: linear-gradient(140deg, #f7cfc7, #f4e5b8, #d6ece4); }.now-playing > span { display: grid; width: 47px; height: 47px; place-items: center; border-radius: 16px; background: rgb(255 255 255 / 48%); font-size: 25px; }.now-playing small, .now-playing p { color: #6c615d; font-size: 11px; }.now-playing strong { display: block; margin: 3px 0; font-size: 17px; }.now-playing p { margin: 0; }
 audio { width: 100%; margin: 15px 0; }.track-list { display: grid; gap: 8px; }.track-list button { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; padding: 13px; border: 1px solid #eee2d9; border-radius: 16px; background: #fffdfb; text-align: left; }.track-list button.active { border-color: #ca9370; background: #fff4ed; }.track-list button > span { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 10px; background: #e6f0eb; }.track-list strong, .track-list small { display: block; }.track-list strong { font-size: 13px; }.track-list small, .track-list b { color: #796d67; font-size: 11px; }.track-list b { color: #9d684d; }.audio-disclaimer { margin: 18px 2px 0; color: #938984; font-size: 11px; line-height: 1.6; text-align: center; }
 
-@media (min-width: 640px) { .app-shell { padding-top: 48px; } .conversation-card, .report-card { padding: 32px; } }
+@media (min-width: 640px) {
+  .app-shell { display: grid; min-height: 100vh; place-items: center; padding: 48px 16px; }
+  .conversation-card, .report-card, .home-card, .list-card, .audio-card { min-height: 820px; padding: 32px; }
+}
