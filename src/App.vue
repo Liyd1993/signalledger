@@ -13,6 +13,7 @@ const draft = ref('')
 const report = ref<ReflectionReport | ArchivedReport | null>(null)
 const reports = ref<ArchivedReport[]>(loadReports())
 const transcript = ref<HTMLElement | null>(null)
+const conversationIntro = ref<HTMLElement | null>(null)
 const pendingImage = ref<string | null>(null)
 const pendingImageName = ref('')
 const selectedTrack = ref<AmbientTrack>(ambientTracks[0])
@@ -22,6 +23,7 @@ const isPlaying = ref(false)
 const currentTime = ref(0)
 const duration = ref(18)
 const messagesToReport = computed(() => Math.max(unlockAt.value - userMessageCount.value, 0))
+const introShift = ref(0)
 
 function go(next: Page) { report.value = null; page.value = next }
 function send() { conversation.send(draft.value); draft.value = '' }
@@ -50,7 +52,14 @@ function selectTrack(track: AmbientTrack) {
 }
 function togglePlayback() { if (!audioPlayer.value) return; isPlaying.value ? audioPlayer.value.pause() : audioPlayer.value.play() }
 function formatTime(value: number) { const seconds = Math.floor(value || 0); return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` }
-watch(() => messages.value.length, async () => { await nextTick(); transcript.value?.scrollTo({ top: transcript.value.scrollHeight, behavior: 'smooth' }) })
+watch(() => messages.value.length, async () => {
+  await nextTick()
+  const messageNodes = [...(transcript.value?.querySelectorAll<HTMLElement>('.message') ?? [])]
+  const rowGap = Number.parseFloat(transcript.value ? getComputedStyle(transcript.value).rowGap : '0') || 0
+  const messageHeight = messageNodes.reduce((total, node) => total + node.offsetHeight, 0) + Math.max(messageNodes.length - 1, 0) * rowGap
+  introShift.value = Math.min(messageHeight, conversationIntro.value?.offsetHeight ?? 0)
+  transcript.value?.scrollTo({ top: transcript.value.scrollHeight, behavior: 'smooth' })
+})
 onBeforeUnmount(() => { if (audioUrl.value) URL.revokeObjectURL(audioUrl.value) })
 selectTrack(selectedTrack.value)
 </script>
@@ -66,10 +75,12 @@ selectTrack(selectedTrack.value)
       </div><p class="home-note">不需要组织得很好。说出一个片段，也可以。</p>
     </section>
 
-    <section v-else-if="page === 'chat' && !report" class="conversation-card" :class="{ 'has-messages': messages.length }" aria-label="对话">
+    <section v-else-if="page === 'chat' && !report" class="conversation-card" aria-label="对话">
       <button class="back-button" type="button" @click="go('home')">← 返回首页</button>
-      <header class="hero"><div class="mark">✦</div><p class="eyebrow">ECHO REPORT</p><h1>把现在的心情，<br />慢慢说出来</h1><p class="subhead">这是一次非医疗的自我反思对话。</p></header>
-      <div class="progress-card"><div><span>对话进度</span><strong>{{ userMessageCount }} <small>/ 10</small></strong></div><p v-if="messagesToReport">再写 {{ messagesToReport }} 段表达，即可生成专属报告</p><p v-else>你已积累足够的表达，可以生成一份回顾报告。</p></div>
+      <div ref="conversationIntro" class="conversation-intro" :style="{ transform: `translateY(-${introShift}px)`, marginBottom: `-${introShift}px` }">
+        <header class="hero"><div class="mark">✦</div><p class="eyebrow">ECHO REPORT</p><h1>把现在的心情，<br />慢慢说出来</h1><p class="subhead">这是一次非医疗的自我反思对话。</p></header>
+        <div class="progress-card"><div><span>对话进度</span><strong>{{ userMessageCount }} <small>/ 10</small></strong></div><p v-if="messagesToReport">再写 {{ messagesToReport }} 段表达，即可生成专属报告</p><p v-else>你已积累足够的表达，可以生成一份回顾报告。</p></div>
+      </div>
       <div ref="transcript" class="transcript" aria-live="polite"><p v-if="!messages.length" class="empty-state">从此刻最想说的一件小事开始也可以。</p><div v-for="message in messages" :key="message.id" class="message" :class="message.role"><img v-if="message.kind === 'image' && message.imageUrl" :src="message.imageUrl" :alt="message.text || '用户上传的图片'" /><template v-else>{{ message.text }}</template></div></div>
       <aside v-if="crisisActive" class="crisis-card" role="alert"><span>✦</span><div><strong>你现在的安全最重要</strong><p>请优先联系身边可信任的人、当地紧急服务，或中国心理援助热线 12356。</p></div></aside>
       <button v-else-if="canCreateReport" class="report-cta" type="button" @click="openReport"><span>✦</span> 生成我的专属报告</button>

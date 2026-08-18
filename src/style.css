@@ -29,6 +29,7 @@ button { cursor: pointer; }
   box-shadow: 0 18px 60px rgb(92 65 52 / 12%);
   backdrop-filter: blur(18px);
 }
+.conversation-card { overflow: hidden; }
 
 .hero { text-align: center; padding: 6px 0 20px; }
 .mark { color: #af814d; font-size: 25px; }
@@ -57,11 +58,7 @@ h1 { margin: 7px 0 10px; font-size: clamp(28px, 8vw, 38px); line-height: 1.2; le
 .message.user { justify-self: end; border-bottom-right-radius: 4px; background: #f4d8d1; }
 .message.assistant { justify-self: start; border-bottom-left-radius: 4px; background: #eaf3ed; }
 .message img { display: block; max-width: 220px; max-height: 260px; border-radius: 12px; object-fit: cover; }
-.conversation-card.has-messages .hero { padding: 0 0 8px; }
-.conversation-card.has-messages .hero .mark, .conversation-card.has-messages .hero .subhead { display: none; }
-.conversation-card.has-messages .hero h1 { margin: 3px 0; font-size: 25px; }
-.conversation-card.has-messages .progress-card { gap: 4px; padding: 12px 18px; }
-.conversation-card.has-messages .transcript { height: 448px; padding-top: 14px; }
+.conversation-intro { transition: transform 240ms ease-out, margin-bottom 240ms ease-out; }
 
 .report-cta {
   width: 100%; margin: 0 0 14px; padding: 17px 18px; border: 0; border-radius: 18px;
