@@ -18,4 +18,12 @@ describe('report archive', () => {
     localStorage.setItem('echoreport:reports', '{bad json')
     expect(loadReports()).toEqual([])
   })
+
+  it('ignores incomplete archived reports', () => {
+    localStorage.setItem('echoreport:reports', JSON.stringify([
+      { id: 'broken', title: '不完整报告' },
+      { ...report, id: 'valid', createdAt: '2026-08-19T09:00:00.000Z', summary: report.feelings },
+    ]))
+    expect(loadReports().map((item) => item.id)).toEqual(['valid'])
+  })
 })

@@ -13,10 +13,18 @@ function remove(key: string) {
   try { globalThis.localStorage?.removeItem(key) } catch { memory.delete(key) }
 }
 
+function isArchivedReport(item: unknown): item is ArchivedReport {
+  if (!item || typeof item !== 'object') return false
+  const report = item as Partial<ArchivedReport>
+  return ['id', 'createdAt', 'title', 'summary', 'feelings', 'nextStep', 'nextQuestion'].every((key) => typeof report[key as keyof ArchivedReport] === 'string')
+    && Array.isArray(report.evidence)
+    && report.evidence.every((line) => typeof line === 'string')
+}
+
 export function loadReports(): ArchivedReport[] {
   try {
     const parsed = JSON.parse(get(storageKey) ?? '[]')
-    return Array.isArray(parsed) ? parsed.filter((item): item is ArchivedReport => Boolean(item?.id && item?.title)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)) : []
+    return Array.isArray(parsed) ? parsed.filter(isArchivedReport).sort((a, b) => b.createdAt.localeCompare(a.createdAt)) : []
   } catch {
     return []
   }
