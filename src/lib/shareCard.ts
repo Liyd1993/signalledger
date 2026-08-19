@@ -11,10 +11,10 @@ export type ShareCardContent = {
 }
 
 export const shareCardThemes: { id: ShareCardTheme; label: string; asset: string }[] = [
-  { id: 'holographic', label: '虹光秘仪', asset: '/cards/holographic-arcana.png' },
-  { id: 'minimal', label: '纯黑极简', asset: '/cards/black-minimal.png' },
-  { id: 'nouveau', label: '新艺术晨光', asset: '/cards/art-nouveau-dawn.png' },
-  { id: 'cosmos', label: '金线星图', asset: '/cards/gilded-cosmos.png' },
+  { id: 'holographic', label: '虹光秘仪', asset: '/cards/holographic-arcana.webp' },
+  { id: 'minimal', label: '纯黑极简', asset: '/cards/black-minimal.webp' },
+  { id: 'nouveau', label: '新艺术晨光', asset: '/cards/art-nouveau-dawn.webp' },
+  { id: 'cosmos', label: '金线星图', asset: '/cards/gilded-cosmos.webp' },
 ]
 
 const fallbackEmpathy = '你愿意停下来听见自己，这件事本身就很重要。'

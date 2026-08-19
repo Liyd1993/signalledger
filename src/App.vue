@@ -2,16 +2,22 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { ambientTracks, createWav, type AmbientTrack } from './lib/audio'
 import { archiveReport, loadReports } from './lib/reportArchive'
+import { createShareCardContent, downloadShareCard, shareCardThemes, type ShareCardTheme } from './lib/shareCard'
 import { createConversation } from './stores/conversation'
 import type { ArchivedReport, ReflectionReport } from './types'
 
-type Page = 'home' | 'chat' | 'reports' | 'audio'
+type Page = 'home' | 'chat' | 'reports' | 'cards' | 'audio'
 const page = ref<Page>('home')
 const conversation = createConversation()
 const { messages, crisisActive, userMessageCount, unlockAt, canCreateReport } = conversation
 const draft = ref('')
 const report = ref<ReflectionReport | ArchivedReport | null>(null)
 const reports = ref<ArchivedReport[]>(loadReports())
+const cardReport = ref<ArchivedReport | null>(null)
+const cardTheme = ref<ShareCardTheme>('holographic')
+const isExporting = ref(false)
+const exportError = ref('')
+const siteOrigin = window.location.origin
 const transcript = ref<HTMLElement | null>(null)
 const conversationIntro = ref<HTMLElement | null>(null)
 const pendingImage = ref<string | null>(null)
@@ -23,9 +29,11 @@ const isPlaying = ref(false)
 const currentTime = ref(0)
 const duration = ref(18)
 const messagesToReport = computed(() => Math.max(unlockAt.value - userMessageCount.value, 0))
+const cardContent = computed(() => cardReport.value ? createShareCardContent(cardReport.value, window.location.hostname) : null)
+const selectedCardTheme = computed(() => shareCardThemes.find((theme) => theme.id === cardTheme.value) ?? shareCardThemes[0])
 const introShift = ref(0)
 
-function go(next: Page) { report.value = null; page.value = next }
+function go(next: Page) { report.value = null; cardReport.value = null; page.value = next }
 function send() { conversation.send(draft.value); draft.value = '' }
 function openReport() {
   const created = conversation.createCurrentReport()
@@ -33,6 +41,16 @@ function openReport() {
   report.value = archiveReport(created); reports.value = loadReports()
 }
 function showReport(item: ArchivedReport) { report.value = item }
+function openCards(item: ArchivedReport) {
+  report.value = null; cardReport.value = item; cardTheme.value = 'holographic'; exportError.value = ''; page.value = 'cards'
+}
+async function exportCard() {
+  if (!cardReport.value || isExporting.value) return
+  isExporting.value = true; exportError.value = ''
+  try { await downloadShareCard(cardReport.value, cardTheme.value, window.location.hostname) }
+  catch { exportError.value = '图片生成失败，请稍后再试。' }
+  finally { isExporting.value = false }
+}
 function selectImage(event: Event) {
   const input = event.target as HTMLInputElement; const file = input.files?.[0]
   if (!file) return
@@ -93,7 +111,32 @@ selectTrack(selectedTrack.value)
       <form v-if="!crisisActive" class="composer" @submit.prevent="send"><label class="image-picker" title="添加图片"><span>＋</span><input type="file" accept="image/png,image/jpeg,image/webp" @change="selectImage" /></label><input v-model="draft" aria-label="输入想说的话" maxlength="200" placeholder="想从哪里开始说？" /><button type="submit" :disabled="!draft.trim()">发送</button></form>
     </section>
 
-    <section v-else-if="page === 'reports' && !report" class="list-card" aria-label="全部报告"><button class="back-button" type="button" @click="go('home')">← 返回首页</button><header class="page-title"><p class="eyebrow">YOUR ARCHIVE</p><h1>我的报告</h1><p>每一份都是一次对刚才表达的回顾。</p></header><div v-if="!reports.length" class="empty-archive"><span>✦</span><h2>这里还没有报告</h2><p>完成 10 段文字表达后，就能生成第一份回顾。</p><button class="small-cta" type="button" @click="go('chat')">开始对话</button></div><button v-for="item in reports" v-else :key="item.id" class="archive-item" type="button" @click="showReport(item)"><span>{{ new Date(item.createdAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' }) }}</span><strong>{{ item.title }}</strong><small>{{ item.summary }}</small><b>查看 →</b></button></section>
+    <section v-else-if="page === 'reports' && !report" class="list-card" aria-label="全部报告">
+      <button class="back-button" type="button" @click="go('home')">← 返回首页</button>
+      <header class="page-title"><p class="eyebrow">YOUR ARCHIVE</p><h1>我的报告</h1><p>每一份都是一次对刚才表达的回顾。</p></header>
+      <div v-if="!reports.length" class="empty-archive"><span>✦</span><h2>这里还没有报告</h2><p>完成 10 段文字表达后，就能生成第一份回顾。</p><button class="small-cta" type="button" @click="go('chat')">开始对话</button></div>
+      <article v-for="item in reports" v-else :key="item.id" class="archive-item">
+        <div class="archive-copy"><span>{{ new Date(item.createdAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' }) }}</span><strong>{{ item.title }}</strong><small>{{ item.summary }}</small></div>
+        <div class="archive-actions"><button type="button" :aria-label="`查看报告：${item.title}`" @click="showReport(item)">查看报告</button><button class="make-card" type="button" :aria-label="`为报告生成卡牌：${item.title}`" @click="openCards(item)">生成卡牌 ✦</button></div>
+      </article>
+    </section>
+
+    <section v-else-if="page === 'cards' && cardReport && cardContent" class="card-studio" aria-label="我的卡牌">
+      <button class="back-button" type="button" @click="go('reports')">← 回到报告列表</button>
+      <header class="page-title card-title"><p class="eyebrow">SHARE YOUR NOTE</p><h1>我的卡牌</h1><p>同一份心情，试试四种表达。</p></header>
+      <article class="share-card-preview" :class="`theme-${cardTheme}`">
+        <img class="share-card-art" :src="selectedCardTheme.asset" alt="" />
+        <div class="share-card-frame">
+          <div class="share-card-meta"><span>ECHO CARD</span><time>{{ cardContent.date }}</time></div>
+          <div class="share-card-copy"><small>MY INNER NOTE</small><h2>{{ cardContent.archetype }}</h2><p>“{{ cardContent.empathy }}”</p></div>
+          <ul class="share-card-keywords"><li v-for="keyword in cardContent.keywords" :key="keyword">{{ keyword }}</li></ul>
+          <footer><small>基于一次真实表达生成 · 非医疗建议</small><a :href="siteOrigin" target="_blank" rel="noreferrer">EchoReport · {{ cardContent.website }}</a></footer>
+        </div>
+      </article>
+      <div class="theme-picker" role="group" aria-label="选择卡牌样式"><button v-for="theme in shareCardThemes" :key="theme.id" type="button" :class="[{ active: theme.id === cardTheme }, `theme-choice-${theme.id}`]" :aria-pressed="theme.id === cardTheme" @click="cardTheme = theme.id"><span></span>{{ theme.label }}</button></div>
+      <button class="download-card" type="button" :disabled="isExporting" @click="exportCard">{{ isExporting ? '正在生成图片…' : '下载 3:4 PNG' }}</button>
+      <p v-if="exportError" class="export-error" role="alert">{{ exportError }}</p>
+    </section>
 
     <section v-else-if="page === 'audio'" class="audio-card" aria-label="声音陪伴">
       <button class="back-button" type="button" @click="go('home')">← 返回首页</button>
