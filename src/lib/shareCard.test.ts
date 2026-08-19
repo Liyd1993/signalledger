@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createShareCardContent } from './shareCard'
+import { createShareCardContent, shareCardThemes } from './shareCard'
 import type { ArchivedReport } from '../types'
 
 const report: ArchivedReport = {
@@ -14,6 +14,10 @@ const report: ArchivedReport = {
 }
 
 describe('createShareCardContent', () => {
+  it('offers only the three approved user-selectable backgrounds', () => {
+    expect(shareCardThemes.map((theme) => theme.id)).toEqual(['nouveau', 'cosmos', 'holographic'])
+  })
+
   it('derives stable, non-diagnostic share copy', () => {
     expect(createShareCardContent(report, 'https://example.com/path')).toMatchObject({
       archetype: '缓慢复原者',

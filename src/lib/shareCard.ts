@@ -1,6 +1,6 @@
 import type { ArchivedReport } from '../types'
 
-export type ShareCardTheme = 'holographic' | 'minimal' | 'nouveau' | 'cosmos'
+export type ShareCardTheme = 'nouveau' | 'cosmos' | 'holographic'
 
 export type ShareCardContent = {
   archetype: string
@@ -11,10 +11,9 @@ export type ShareCardContent = {
 }
 
 export const shareCardThemes: { id: ShareCardTheme; label: string; asset: string }[] = [
-  { id: 'holographic', label: '虹光秘仪', asset: '/cards/holographic-arcana.webp' },
-  { id: 'minimal', label: '纯黑极简', asset: '/cards/black-minimal.webp' },
   { id: 'nouveau', label: '新艺术晨光', asset: '/cards/art-nouveau-dawn.webp' },
   { id: 'cosmos', label: '金线星图', asset: '/cards/gilded-cosmos.webp' },
+  { id: 'holographic', label: '虹光秘仪', asset: '/cards/holographic-arcana.webp' },
 ]
 
 const fallbackEmpathy = '你愿意停下来听见自己，这件事本身就很重要。'
@@ -69,10 +68,9 @@ export function createShareCardContent(report: ArchivedReport, hostname: string)
 type Palette = { top: string; bottom: string; ink: string; muted: string; accent: string; panel: string }
 
 const palettes: Record<ShareCardTheme, Palette> = {
-  holographic: { top: '#101923', bottom: '#202b35', ink: '#f8fbff', muted: '#d1deea', accent: '#84e5ef', panel: 'rgba(10,18,27,.72)' },
-  minimal: { top: '#050608', bottom: '#17181c', ink: '#ffffff', muted: '#c8c8cc', accent: '#ece3cf', panel: 'rgba(0,0,0,.58)' },
   nouveau: { top: '#f7eee2', bottom: '#cfe9df', ink: '#392d2d', muted: '#655a55', accent: '#9a7046', panel: 'rgba(255,250,244,.78)' },
   cosmos: { top: '#121412', bottom: '#24231f', ink: '#f6ecd4', muted: '#d2c5a7', accent: '#d3b171', panel: 'rgba(13,14,12,.7)' },
+  holographic: { top: '#101923', bottom: '#202b35', ink: '#f8fbff', muted: '#d1deea', accent: '#84e5ef', panel: 'rgba(10,18,27,.72)' },
 }
 
 function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {

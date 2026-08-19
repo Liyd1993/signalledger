@@ -137,9 +137,6 @@ h1 { margin: 7px 0 10px; font-size: clamp(28px, 8vw, 38px); line-height: 1.2; le
 .share-card-frame footer small { color: #d0dbdc; font-size: 8px; }
 .share-card-frame footer a { color: #fff; font-size: 10px; font-weight: 800; text-decoration: none; }
 
-.theme-minimal .share-card-meta, .theme-minimal .share-card-copy small { color: #eadfc5; }
-.theme-minimal .share-card-copy { background: rgb(0 0 0 / 48%); }
-.theme-minimal .share-card-keywords li { border-color: rgb(234 223 197 / 55%); color: #f8f2e7; background: rgb(0 0 0 / 44%); }
 .theme-nouveau { color: #3d302b; }
 .theme-nouveau::after { background: rgb(255 250 240 / 5%); }
 .theme-nouveau .share-card-meta, .theme-nouveau .share-card-copy small { color: #725435; }
@@ -151,10 +148,9 @@ h1 { margin: 7px 0 10px; font-size: clamp(28px, 8vw, 38px); line-height: 1.2; le
 .theme-cosmos .share-card-copy { background: rgb(15 15 13 / 66%); }
 .theme-cosmos .share-card-keywords li { border-color: rgb(224 191 127 / 54%); color: #f3e7cc; background: rgb(15 15 13 / 56%); }
 
-.theme-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 11px; }
+.theme-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 11px; }
 .theme-picker button { display: flex; min-height: 44px; align-items: center; gap: 9px; padding: 8px 10px; border: 1px solid #dfd2ca; border-radius: 11px; color: #594c47; background: rgb(255 255 255 / 64%); font-size: 12px; font-weight: 700; }
-.theme-picker button > span { width: 26px; height: 26px; flex: 0 0 auto; border-radius: 8px; background: linear-gradient(135deg, #12202b, #71dce8 48%, #e29abe); }
-.theme-picker .theme-choice-minimal > span { background: linear-gradient(135deg, #020204, #5d5549); }.theme-picker .theme-choice-nouveau > span { background: linear-gradient(135deg, #f5d4c9, #d2eee1 55%, #d3a862); }.theme-picker .theme-choice-cosmos > span { background: linear-gradient(135deg, #161714, #b99351); }
+.theme-picker button > span { width: 26px; height: 26px; flex: 0 0 auto; border-radius: 8px; background: var(--theme-thumb) center / cover; }
 .theme-picker button.active { border-color: #8e5b45; outline: 2px solid rgb(142 91 69 / 22%); background: #fff8f3; }
 .theme-picker button:focus-visible, .download-card:focus-visible { outline: 2px solid #8e5b45; outline-offset: 2px; }
 .download-card { width: 100%; min-height: 46px; border: 0; border-radius: 12px; color: white; background: #8e5b45; font-weight: 800; }

@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a per-report “生成卡牌” flow with four original visual themes and dependency-free 1080 × 1440 PNG export.
+**Goal:** Add a per-report “生成卡牌” flow with three user-selectable original backgrounds and dependency-free 1080 × 1440 PNG export.
 
-**Architecture:** Keep report-to-card content as pure, tested functions in `src/lib/shareCard.ts`. `App.vue` owns only page selection and click handlers, while CSS renders the four previews and the native Canvas exporter draws the same content into a downloadable image. Decorative generated assets stay optional background layers so text remains live and accessible.
+**Architecture:** Keep report-to-card content as pure, tested functions in `src/lib/shareCard.ts`. `App.vue` owns only page selection and click handlers, while CSS renders the three background previews and the native Canvas exporter draws the same content into a downloadable image. Decorative generated assets stay optional background layers so text remains live and accessible.
 
 **Tech Stack:** Vue 3 Composition API, TypeScript, Vitest, CSS, Canvas 2D API, Vite static assets.
 
@@ -12,7 +12,7 @@
 
 - Entry is attached to every archived report, alongside the existing report-view action.
 - Card aspect ratio is 3:4; exported PNG is exactly 1080 × 1440.
-- All four themes display identical report-derived content.
+- All three backgrounds display identical report-derived content.
 - Footer uses the runtime hostname so deployment needs no source change.
 - No new npm runtime dependencies.
 - No medical diagnosis, personality diagnosis, copied tarot names, reference-image reuse, or watermarked artwork.
@@ -83,31 +83,30 @@ git add src/types.ts src/lib/shareCard.ts src/lib/shareCard.test.ts
 git commit -m "feat: derive safe share card content"
 ```
 
-### Task 2: Four original decorative assets
+### Task 2: Three approved original decorative assets
 
 **Files:**
 - Create: `public/cards/holographic-arcana.png`
-- Create: `public/cards/black-minimal.png`
 - Create: `public/cards/art-nouveau-dawn.png`
 - Create: `public/cards/gilded-cosmos.png`
 
 **Interfaces:**
-- Consumes: the four approved reference directions as style-only inspiration.
+- Consumes: the three approved reference directions as style-only inspiration.
 - Produces: portrait decorative backgrounds without text, logos, tarot names, people copied from references, or watermarks.
 
 - [ ] **Step 1: Generate each theme as a separate image request**
 
-Every request must reserve a clean central text zone and use a 3:4 portrait composition. The four prompts are: dark cyan/pink holographic geometry; near-black minimal light orbit; pastel mint/pink/gold original Art Nouveau flora and sun; charcoal/gold celestial glyph field.
+Every request must reserve a clean central text zone and use a 3:4 portrait composition. The three prompts are: pastel mint/pink/gold original Art Nouveau flora and sun; charcoal/gold celestial glyph field; dark cyan/pink holographic geometry.
 
 - [ ] **Step 2: Copy outputs into `public/cards/` with the exact filenames above**
 
-Expected: four readable PNG files, each visually distinct at thumbnail size.
+Expected: three readable background files, each visually distinct at thumbnail size.
 
 - [ ] **Step 3: Inspect all assets and reject text/watermark artifacts**
 
 Run: `file public/cards/*.png`
 
-Expected: four PNG images. Visually verify central copy area is not obstructed.
+Expected: three background images. Visually verify central copy area is not obstructed.
 
 - [ ] **Step 4: Commit**
 
@@ -137,7 +136,7 @@ The title/summary area invokes `showReport(item)`; the separate action invokes `
 
 - [ ] **Step 3: Add card-page markup**
 
-Render the selected 3:4 preview, theme picker with four text labels, dynamic date/content/keywords/hostname, return button, and a disabled export state. Use a hidden canvas only for export.
+Render the selected 3:4 preview, background picker with three image thumbnails and text labels, dynamic date/content/keywords/hostname, return button, and a disabled export state. Use a hidden canvas only for export.
 
 - [ ] **Step 4: Add responsive and accessible CSS**
 
@@ -151,7 +150,7 @@ Expected: all tests PASS and Vite build exits 0.
 
 - [ ] **Step 6: Browser regression**
 
-At desktop and 390px widths verify: every report exposes both actions; viewing reports still works; card page opens the selected report; four themes switch; hostname is visible; download creates a PNG; return restores the report list; console contains no errors.
+At desktop and 390px widths verify: every report exposes both actions; viewing reports still works; card page opens the selected report; three backgrounds switch; hostname is visible; download creates a PNG; return restores the report list; console contains no errors.
 
 - [ ] **Step 7: Commit**
 
@@ -162,6 +161,6 @@ git commit -m "feat: add report share card flow"
 
 ## Self-review
 
-- Spec coverage: all entry, content, four-theme, dynamic-link, download, responsive, accessibility, and regression requirements map to Tasks 1–3.
+- Spec coverage: all entry, content, three-background, dynamic-link, download, responsive, accessibility, and regression requirements map to Tasks 1–3.
 - Placeholder scan: no deferred product behavior; generated artwork is defined by exact theme and file contract.
 - Type consistency: `ShareCardTheme` and `ShareCardContent` originate in Task 1 and are consumed unchanged in Task 3.

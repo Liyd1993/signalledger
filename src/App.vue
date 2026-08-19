@@ -14,7 +14,7 @@ const draft = ref('')
 const report = ref<ReflectionReport | ArchivedReport | null>(null)
 const reports = ref<ArchivedReport[]>(loadReports())
 const cardReport = ref<ArchivedReport | null>(null)
-const cardTheme = ref<ShareCardTheme>('holographic')
+const cardTheme = ref<ShareCardTheme>('nouveau')
 const isExporting = ref(false)
 const exportError = ref('')
 const siteOrigin = window.location.origin
@@ -42,7 +42,7 @@ function openReport() {
 }
 function showReport(item: ArchivedReport) { report.value = item }
 function openCards(item: ArchivedReport) {
-  report.value = null; cardReport.value = item; cardTheme.value = 'holographic'; exportError.value = ''; page.value = 'cards'
+  report.value = null; cardReport.value = item; cardTheme.value = 'nouveau'; exportError.value = ''; page.value = 'cards'
 }
 async function exportCard() {
   if (!cardReport.value || isExporting.value) return
@@ -123,7 +123,7 @@ selectTrack(selectedTrack.value)
 
     <section v-else-if="page === 'cards' && cardReport && cardContent" class="card-studio" aria-label="我的卡牌">
       <button class="back-button" type="button" @click="go('reports')">← 回到报告列表</button>
-      <header class="page-title card-title"><p class="eyebrow">SHARE YOUR NOTE</p><h1>我的卡牌</h1><p>同一份心情，试试四种表达。</p></header>
+      <header class="page-title card-title"><p class="eyebrow">SHARE YOUR NOTE</p><h1>我的卡牌</h1><p>同一份心情，选择你喜欢的背景。</p></header>
       <article class="share-card-preview" :class="`theme-${cardTheme}`">
         <img class="share-card-art" :src="selectedCardTheme.asset" alt="" />
         <div class="share-card-frame">
@@ -133,7 +133,7 @@ selectTrack(selectedTrack.value)
           <footer><small>基于一次真实表达生成 · 非医疗建议</small><a :href="siteOrigin" target="_blank" rel="noreferrer">EchoReport · {{ cardContent.website }}</a></footer>
         </div>
       </article>
-      <div class="theme-picker" role="group" aria-label="选择卡牌样式"><button v-for="theme in shareCardThemes" :key="theme.id" type="button" :class="[{ active: theme.id === cardTheme }, `theme-choice-${theme.id}`]" :aria-pressed="theme.id === cardTheme" @click="cardTheme = theme.id"><span></span>{{ theme.label }}</button></div>
+      <div class="theme-picker" role="group" aria-label="选择卡牌背景"><button v-for="theme in shareCardThemes" :key="theme.id" type="button" :class="{ active: theme.id === cardTheme }" :style="{ '--theme-thumb': `url(${theme.asset})` }" :aria-pressed="theme.id === cardTheme" @click="cardTheme = theme.id"><span></span>{{ theme.label }}</button></div>
       <button class="download-card" type="button" :disabled="isExporting" @click="exportCard">{{ isExporting ? '正在生成图片…' : '下载 3:4 PNG' }}</button>
       <p v-if="exportError" class="export-error" role="alert">{{ exportError }}</p>
     </section>
