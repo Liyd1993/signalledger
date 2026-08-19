@@ -1,11 +1,11 @@
-export type NoiseKind = 'rain' | 'ocean' | 'fan' | 'stream' | 'brown'
-export type AmbientTrack = { id: NoiseKind; title: string; subtitle: string; kind: NoiseKind }
+export type NoiseKind = 'rain' | 'ocean' | 'stream' | 'forest' | 'brown'
+export type AmbientTrack = { id: NoiseKind; title: string; subtitle: string; kind: NoiseKind; src?: string }
 
 export const ambientTracks: AmbientTrack[] = [
-  { id: 'rain', title: '窗前细雨', subtitle: '细密雨声 · 白噪音', kind: 'rain' },
-  { id: 'ocean', title: '远岸海浪', subtitle: '缓慢潮汐 · 粉红噪音', kind: 'ocean' },
-  { id: 'fan', title: '深夜风扇', subtitle: '稳定气流 · 白噪音', kind: 'fan' },
-  { id: 'stream', title: '林间溪流', subtitle: '流动水声 · 自然噪音', kind: 'stream' },
+  { id: 'rain', title: '窗前细雨', subtitle: '真实雨声 · 0:57', kind: 'rain', src: '/audio/rain-long-loop.mp3' },
+  { id: 'ocean', title: '远岸海浪', subtitle: '真实海浪 · 0:28', kind: 'ocean', src: '/audio/close-sea-waves.mp3' },
+  { id: 'stream', title: '林间溪流', subtitle: '真实流水 · 0:51', kind: 'stream', src: '/audio/flowing-water.mp3' },
+  { id: 'forest', title: '森林清晨', subtitle: '流水与鸟鸣 · 0:48', kind: 'forest', src: '/audio/forest-water-birds.mp3' },
   { id: 'brown', title: '布朗噪音', subtitle: '低频柔和 · 布朗噪音', kind: 'brown' },
 ]
 
@@ -19,7 +19,7 @@ function sample(kind: NoiseKind, index: number, time: number, brown: { value: nu
   const noise = pseudoNoise(index)
   if (kind === 'brown') { brown.value = (brown.value + noise * .025) * .985; return brown.value * .7 }
   if (kind === 'ocean') { brown.value = (brown.value + noise * .018) * .988; return brown.value * (.27 + .2 * Math.sin(time * .65)) }
-  if (kind === 'fan') return noise * .075 + Math.sin(2 * Math.PI * 96 * time) * .035 + Math.sin(2 * Math.PI * 192 * time) * .015
+  if (kind === 'forest') return noise * .065
   if (kind === 'stream') return noise * (.07 + .035 * Math.sin(time * 3.3)) + Math.sin(2 * Math.PI * 410 * time) * .009
   return noise * (.055 + .045 * Math.max(0, Math.sin(time * 7.1)))
 }

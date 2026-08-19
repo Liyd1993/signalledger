@@ -47,8 +47,8 @@ function sendImage() {
 }
 function selectTrack(track: AmbientTrack) {
   audioPlayer.value?.pause()
-  if (audioUrl.value) URL.revokeObjectURL(audioUrl.value)
-  selectedTrack.value = track; audioUrl.value = URL.createObjectURL(createWav(track)); currentTime.value = 0; isPlaying.value = false
+  if (audioUrl.value.startsWith('blob:')) URL.revokeObjectURL(audioUrl.value)
+  selectedTrack.value = track; audioUrl.value = track.src ?? URL.createObjectURL(createWav(track)); currentTime.value = 0; isPlaying.value = false
 }
 function togglePlayback() { if (!audioPlayer.value) return; isPlaying.value ? audioPlayer.value.pause() : audioPlayer.value.play() }
 function formatTime(value: number) { const seconds = Math.floor(value || 0); return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` }
@@ -65,7 +65,7 @@ watch(() => messages.value.length, async () => {
   introShift.value = Math.min(messageHeight, introLimit)
   transcript.value?.scrollTo({ top: transcript.value.scrollHeight, behavior: 'smooth' })
 })
-onBeforeUnmount(() => { if (audioUrl.value) URL.revokeObjectURL(audioUrl.value) })
+onBeforeUnmount(() => { if (audioUrl.value.startsWith('blob:')) URL.revokeObjectURL(audioUrl.value) })
 selectTrack(selectedTrack.value)
 </script>
 
@@ -98,10 +98,10 @@ selectTrack(selectedTrack.value)
     <section v-else-if="page === 'audio'" class="audio-card" aria-label="声音陪伴">
       <button class="back-button" type="button" @click="go('home')">← 返回首页</button>
       <header class="page-title"><p class="eyebrow">SOUND LIBRARY</p><h1>白噪音声景</h1><p>为此刻挑一段持续、无歌词的声音。</p></header>
-      <div class="sound-cover" :class="selectedTrack.id"><span>{{ selectedTrack.id === 'rain' ? '☂' : selectedTrack.id === 'ocean' ? '◒' : selectedTrack.id === 'fan' ? '◌' : selectedTrack.id === 'stream' ? '≈' : '◉' }}</span><small>正在播放</small><strong>{{ selectedTrack.title }}</strong><p>{{ selectedTrack.subtitle }}</p></div>
+      <div class="sound-cover" :class="selectedTrack.id"><span>{{ selectedTrack.id === 'rain' ? '☂' : selectedTrack.id === 'ocean' ? '◒' : selectedTrack.id === 'stream' ? '≈' : selectedTrack.id === 'forest' ? '♧' : '◉' }}</span><small>正在播放</small><strong>{{ selectedTrack.title }}</strong><p>{{ selectedTrack.subtitle }}</p></div>
       <audio v-if="audioUrl" ref="audioPlayer" :src="audioUrl" loop preload="metadata" @play="isPlaying = true" @pause="isPlaying = false" @ended="isPlaying = false" @loadedmetadata="duration = audioPlayer?.duration || 18" @timeupdate="currentTime = audioPlayer?.currentTime || 0">你的浏览器暂不支持音频播放。</audio>
       <div class="player-controls"><button class="play-button" type="button" :aria-label="isPlaying ? '暂停' : '播放'" @click="togglePlayback">{{ isPlaying ? 'Ⅱ' : '▶' }}</button><span>{{ formatTime(currentTime) }}</span><input v-model.number="currentTime" type="range" min="0" :max="duration || 18" step="0.1" aria-label="播放进度" @input="audioPlayer && (audioPlayer.currentTime = currentTime)" /><span>{{ formatTime(duration) }}</span></div>
-      <div class="track-list"><button v-for="track in ambientTracks" :key="track.id" type="button" :class="{ active: track.id === selectedTrack.id }" @click="selectTrack(track)"><span>{{ track.id === 'rain' ? '☂' : track.id === 'ocean' ? '◒' : track.id === 'fan' ? '◌' : track.id === 'stream' ? '≈' : '◉' }}</span><div><strong>{{ track.title }}</strong><small>{{ track.subtitle }}</small></div><b>{{ track.id === selectedTrack.id ? '正在选择' : '选择' }}</b></button></div><p class="audio-disclaimer">声音用于陪伴与放松，不替代医疗、心理治疗或紧急支持。</p>
+      <div class="track-list"><button v-for="track in ambientTracks" :key="track.id" type="button" :class="{ active: track.id === selectedTrack.id }" @click="selectTrack(track)"><span>{{ track.id === 'rain' ? '☂' : track.id === 'ocean' ? '◒' : track.id === 'stream' ? '≈' : track.id === 'forest' ? '♧' : '◉' }}</span><div><strong>{{ track.title }}</strong><small>{{ track.subtitle }}</small></div><b>{{ track.id === selectedTrack.id ? '正在选择' : '选择' }}</b></button></div><p class="audio-disclaimer">声音用于陪伴与放松，不替代医疗、心理治疗或紧急支持。</p>
     </section>
 
     <section v-else class="report-card" aria-label="专属报告"><button class="back-button" type="button" @click="report = null; page = 'reports'">← 回到报告列表</button><div class="report-hero"><p class="eyebrow">YOUR REFLECTION</p><span>✦</span><h1>{{ report?.title }}</h1><p>这份报告只依据你刚才的表达生成。</p></div><article class="report-section"><h2>你表达出的感受</h2><p>{{ report?.feelings }}</p></article><article class="report-section evidence"><h2>对话里的线索</h2><blockquote v-for="line in report?.evidence" :key="line">“{{ line }}”</blockquote></article><article class="report-section"><h2>可以尝试的一小步</h2><p>{{ report?.nextStep }}</p></article><article class="report-section"><h2>下次可以继续聊</h2><p>{{ report?.nextQuestion }}</p></article><p class="report-disclaimer">这不是诊断、治疗或紧急服务。需要帮助时，请联系专业服务或可信任的人。</p></section>
