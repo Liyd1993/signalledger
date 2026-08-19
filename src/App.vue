@@ -26,6 +26,7 @@ const selectedTrack = ref<AmbientTrack>(ambientTracks[0])
 const audioUrl = ref('')
 const audioPlayer = ref<HTMLAudioElement | null>(null)
 const isPlaying = ref(false)
+const audioError = ref('')
 const currentTime = ref(0)
 const duration = ref(18)
 const messagesToReport = computed(() => Math.max(unlockAt.value - userMessageCount.value, 0))
@@ -63,12 +64,29 @@ function sendImage() {
   conversation.sendImage(pendingImage.value, pendingImageName.value)
   pendingImage.value = null; pendingImageName.value = ''
 }
-function selectTrack(track: AmbientTrack) {
+async function playAudio() {
+  if (!audioPlayer.value) return
+  audioError.value = ''
+  try { await audioPlayer.value.play() }
+  catch { isPlaying.value = false; audioError.value = '音频暂时无法播放，请重试或选择另一段声音。' }
+}
+async function selectTrack(track: AmbientTrack, autoplay = false) {
+  if (track.id === selectedTrack.value.id && audioUrl.value) {
+    if (autoplay) await playAudio()
+    return
+  }
   audioPlayer.value?.pause()
   if (audioUrl.value.startsWith('blob:')) URL.revokeObjectURL(audioUrl.value)
-  selectedTrack.value = track; audioUrl.value = track.src ?? URL.createObjectURL(createWav(track)); currentTime.value = 0; isPlaying.value = false
+  selectedTrack.value = track; audioUrl.value = track.src ?? URL.createObjectURL(createWav(track)); currentTime.value = 0; isPlaying.value = false; audioError.value = ''
+  await nextTick()
+  audioPlayer.value?.load()
+  if (autoplay) await playAudio()
 }
-function togglePlayback() { if (!audioPlayer.value) return; isPlaying.value ? audioPlayer.value.pause() : audioPlayer.value.play() }
+async function togglePlayback() {
+  if (!audioPlayer.value) return
+  if (audioPlayer.value.paused) await playAudio()
+  else audioPlayer.value.pause()
+}
 function formatTime(value: number) { const seconds = Math.floor(value || 0); return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` }
 function scrollTranscript(event: WheelEvent) {
   if (transcript.value) transcript.value.scrollTop += event.deltaY
@@ -81,10 +99,12 @@ watch(() => messages.value.length, async () => {
   const messageHeight = messageNodes.reduce((total, node) => total + node.offsetHeight, 0) + Math.max(messageNodes.length - 1, 0) * rowGap
   const introLimit = conversationIntro.value ? conversationIntro.value.offsetTop + conversationIntro.value.offsetHeight : 0
   introShift.value = Math.min(messageHeight, introLimit)
-  transcript.value?.scrollTo({ top: transcript.value.scrollHeight, behavior: 'smooth' })
+  requestAnimationFrame(() => {
+    if (transcript.value) transcript.value.scrollTop = transcript.value.scrollHeight
+  })
 })
 onBeforeUnmount(() => { if (audioUrl.value.startsWith('blob:')) URL.revokeObjectURL(audioUrl.value) })
-selectTrack(selectedTrack.value)
+void selectTrack(selectedTrack.value)
 </script>
 
 <template>
@@ -116,8 +136,8 @@ selectTrack(selectedTrack.value)
       <header class="page-title"><p class="eyebrow">YOUR ARCHIVE</p><h1>我的报告</h1><p>每一份都是一次对刚才表达的回顾。</p></header>
       <div v-if="!reports.length" class="empty-archive"><span>✦</span><h2>这里还没有报告</h2><p>完成 10 段文字表达后，就能生成第一份回顾。</p><button class="small-cta" type="button" @click="go('chat')">开始对话</button></div>
       <article v-for="item in reports" v-else :key="item.id" class="archive-item">
-        <div class="archive-copy"><span>{{ new Date(item.createdAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' }) }}</span><strong>{{ item.title }}</strong><small>{{ item.summary }}</small></div>
-        <div class="archive-actions"><button type="button" :aria-label="`查看报告：${item.title}`" @click="showReport(item)">查看报告</button><button class="make-card" type="button" :aria-label="`为报告生成卡牌：${item.title}`" @click="openCards(item)">生成卡牌 ✦</button></div>
+        <button class="archive-copy" type="button" :aria-label="`查看报告：${item.title}`" @click="showReport(item)"><span>{{ new Date(item.createdAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' }) }}</span><strong>{{ item.title }}</strong><small>{{ item.summary }}</small><b>查看报告 →</b></button>
+        <button class="make-card" type="button" :aria-label="`为报告生成卡牌：${item.title}`" @click="openCards(item)">生成卡牌 ✦</button>
       </article>
     </section>
 
@@ -141,10 +161,10 @@ selectTrack(selectedTrack.value)
     <section v-else-if="page === 'audio'" class="audio-card" aria-label="声音陪伴">
       <button class="back-button" type="button" @click="go('home')">← 返回首页</button>
       <header class="page-title"><p class="eyebrow">SOUND LIBRARY</p><h1>白噪音声景</h1><p>为此刻挑一段持续、无歌词的声音。</p></header>
-      <div class="sound-cover" :class="selectedTrack.id"><span>{{ selectedTrack.id === 'rain' ? '☂' : selectedTrack.id === 'ocean' ? '◒' : selectedTrack.id === 'stream' ? '≈' : selectedTrack.id === 'forest' ? '♧' : '◉' }}</span><small>正在播放</small><strong>{{ selectedTrack.title }}</strong><p>{{ selectedTrack.subtitle }}</p></div>
-      <audio v-if="audioUrl" ref="audioPlayer" :src="audioUrl" loop preload="metadata" @play="isPlaying = true" @pause="isPlaying = false" @ended="isPlaying = false" @loadedmetadata="duration = audioPlayer?.duration || 18" @timeupdate="currentTime = audioPlayer?.currentTime || 0">你的浏览器暂不支持音频播放。</audio>
+      <div class="sound-cover" :class="selectedTrack.id"><span>{{ selectedTrack.id === 'rain' ? '☂' : selectedTrack.id === 'ocean' ? '◒' : selectedTrack.id === 'stream' ? '≈' : selectedTrack.id === 'forest' ? '♧' : '◉' }}</span><small>{{ isPlaying ? '正在播放' : '已选择' }}</small><strong>{{ selectedTrack.title }}</strong><p>{{ selectedTrack.subtitle }}</p></div>
+      <audio v-if="audioUrl" ref="audioPlayer" :src="audioUrl" loop preload="metadata" @play="isPlaying = true; audioError = ''" @pause="isPlaying = false" @ended="isPlaying = false" @error="audioError = '音频加载失败，请选择另一段声音。'" @loadedmetadata="duration = audioPlayer?.duration || 18" @timeupdate="currentTime = audioPlayer?.currentTime || 0">你的浏览器暂不支持音频播放。</audio>
       <div class="player-controls"><button class="play-button" type="button" :aria-label="isPlaying ? '暂停' : '播放'" @click="togglePlayback">{{ isPlaying ? 'Ⅱ' : '▶' }}</button><span>{{ formatTime(currentTime) }}</span><input v-model.number="currentTime" type="range" min="0" :max="duration || 18" step="0.1" aria-label="播放进度" @input="audioPlayer && (audioPlayer.currentTime = currentTime)" /><span>{{ formatTime(duration) }}</span></div>
-      <div class="track-list"><button v-for="track in ambientTracks" :key="track.id" type="button" :class="{ active: track.id === selectedTrack.id }" @click="selectTrack(track)"><span>{{ track.id === 'rain' ? '☂' : track.id === 'ocean' ? '◒' : track.id === 'stream' ? '≈' : track.id === 'forest' ? '♧' : '◉' }}</span><div><strong>{{ track.title }}</strong><small>{{ track.subtitle }}</small></div><b>{{ track.id === selectedTrack.id ? '正在选择' : '选择' }}</b></button></div><p class="audio-disclaimer">声音用于陪伴与放松，不替代医疗、心理治疗或紧急支持。</p>
+      <div class="track-list"><button v-for="track in ambientTracks" :key="track.id" type="button" :class="{ active: track.id === selectedTrack.id }" @click="selectTrack(track, true)"><span>{{ track.id === 'rain' ? '☂' : track.id === 'ocean' ? '◒' : track.id === 'stream' ? '≈' : track.id === 'forest' ? '♧' : '◉' }}</span><div><strong>{{ track.title }}</strong><small>{{ track.subtitle }}</small></div><b>{{ track.id === selectedTrack.id ? (isPlaying ? '正在播放' : '已选择') : '播放' }}</b></button></div><p v-if="audioError" class="audio-error" role="alert">{{ audioError }}</p><p class="audio-disclaimer">声音用于陪伴与放松，不替代医疗、心理治疗或紧急支持。</p>
     </section>
 
     <section v-else class="report-card" aria-label="专属报告"><button class="back-button" type="button" @click="report = null; page = 'reports'">← 回到报告列表</button><div class="report-hero"><p class="eyebrow">YOUR REFLECTION</p><span>✦</span><h1>{{ report?.title }}</h1><p>这份报告只依据你刚才的表达生成。</p></div><article class="report-section"><h2>你表达出的感受</h2><p>{{ report?.feelings }}</p></article><article class="report-section evidence"><h2>对话里的线索</h2><blockquote v-for="line in report?.evidence" :key="line">“{{ line }}”</blockquote></article><article class="report-section"><h2>可以尝试的一小步</h2><p>{{ report?.nextStep }}</p></article><article class="report-section"><h2>下次可以继续聊</h2><p>{{ report?.nextQuestion }}</p></article><p class="report-disclaimer">这不是诊断、治疗或紧急服务。需要帮助时，请联系专业服务或可信任的人。</p></section>
