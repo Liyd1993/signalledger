@@ -51,6 +51,7 @@ h1 { margin: 7px 0 10px; font-size: clamp(28px, 8vw, 38px); line-height: 1.2; le
 .progress-card p { margin: 0; }
 
 .transcript { position: absolute; top: 76px; right: 20px; bottom: 88px; left: 20px; overflow-y: auto; overscroll-behavior: contain; padding: 24px 4px 24px 0; scroll-behavior: smooth; touch-action: pan-y; }
+.transcript.has-report-cta { padding-bottom: 88px; }
 .message-stack { display: flex; min-height: 100%; flex-direction: column; justify-content: flex-end; gap: 12px; }
 .transcript::-webkit-scrollbar { width: 5px; }
 .transcript::-webkit-scrollbar-thumb { border-radius: 99px; background: #ddc7b9; }
