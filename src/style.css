@@ -50,7 +50,7 @@ h1 { margin: 7px 0 10px; font-size: clamp(28px, 8vw, 38px); line-height: 1.2; le
 .progress-card small { color: #867873; font-size: 14px; }
 .progress-card p { margin: 0; }
 
-.transcript { position: absolute; right: 20px; bottom: 88px; left: 20px; height: 360px; overflow-y: auto; overscroll-behavior: contain; padding: 24px 4px 24px 0; scroll-behavior: smooth; touch-action: pan-y; }
+.transcript { position: absolute; top: 76px; right: 20px; bottom: 88px; left: 20px; overflow-y: auto; overscroll-behavior: contain; padding: 24px 4px 24px 0; scroll-behavior: smooth; touch-action: pan-y; }
 .message-stack { display: flex; min-height: 100%; flex-direction: column; justify-content: flex-end; gap: 12px; }
 .transcript::-webkit-scrollbar { width: 5px; }
 .transcript::-webkit-scrollbar-thumb { border-radius: 99px; background: #ddc7b9; }
@@ -59,7 +59,7 @@ h1 { margin: 7px 0 10px; font-size: clamp(28px, 8vw, 38px); line-height: 1.2; le
 .message.user { align-self: flex-end; border-bottom-right-radius: 4px; background: #f4d8d1; }
 .message.assistant { align-self: flex-start; border-bottom-left-radius: 4px; background: #eaf3ed; }
 .message img { display: block; max-width: 220px; max-height: 260px; border-radius: 12px; object-fit: cover; }
-.conversation-intro { transition: transform 240ms ease-out, margin-bottom 240ms ease-out; }
+.conversation-intro { transition: transform 240ms ease-out; }
 
 .report-cta {
   position: absolute; z-index: 2; right: 20px; bottom: 88px; left: 20px; width: auto; margin: 0; padding: 17px 18px; border: 0; border-radius: 18px;
@@ -126,7 +126,7 @@ h1 { margin: 7px 0 10px; font-size: clamp(28px, 8vw, 38px); line-height: 1.2; le
   .conversation-card { height: 820px; padding-bottom: 104px; }
   .conversation-card .back-button { top: 32px; left: 32px; }
   .conversation-card .composer { right: 32px; bottom: 32px; left: 32px; }
-  .conversation-card .transcript { right: 32px; bottom: 104px; left: 32px; }
+  .conversation-card .transcript { top: 84px; right: 32px; bottom: 104px; left: 32px; }
   .conversation-card .report-cta { right: 32px; bottom: 104px; left: 32px; }
   .conversation-card .image-preview { right: 32px; bottom: 104px; left: 32px; }
 }

@@ -58,9 +58,11 @@ function scrollTranscript(event: WheelEvent) {
 watch(() => messages.value.length, async () => {
   await nextTick()
   const messageNodes = [...(transcript.value?.querySelectorAll<HTMLElement>('.message') ?? [])]
-  const rowGap = Number.parseFloat(transcript.value ? getComputedStyle(transcript.value).rowGap : '0') || 0
+  const messageStack = transcript.value?.querySelector<HTMLElement>('.message-stack')
+  const rowGap = Number.parseFloat(messageStack ? getComputedStyle(messageStack).rowGap : '0') || 0
   const messageHeight = messageNodes.reduce((total, node) => total + node.offsetHeight, 0) + Math.max(messageNodes.length - 1, 0) * rowGap
-  introShift.value = Math.min(messageHeight, (conversationIntro.value?.offsetHeight ?? 0) + 28)
+  const introLimit = conversationIntro.value ? conversationIntro.value.offsetTop + conversationIntro.value.offsetHeight : 0
+  introShift.value = Math.min(messageHeight, introLimit)
   transcript.value?.scrollTo({ top: transcript.value.scrollHeight, behavior: 'smooth' })
 })
 onBeforeUnmount(() => { if (audioUrl.value) URL.revokeObjectURL(audioUrl.value) })
@@ -80,7 +82,7 @@ selectTrack(selectedTrack.value)
 
     <section v-else-if="page === 'chat' && !report" class="conversation-card" aria-label="对话" @wheel.prevent="scrollTranscript">
       <button class="back-button" type="button" @click="go('home')">← 返回首页</button>
-      <div ref="conversationIntro" class="conversation-intro" :style="{ transform: `translateY(-${introShift}px)`, marginBottom: `-${introShift}px` }">
+      <div ref="conversationIntro" class="conversation-intro" :style="{ transform: `translateY(-${introShift}px)` }">
         <header class="hero"><div class="mark">✦</div><p class="eyebrow">ECHO REPORT</p><h1>把现在的心情，<br />慢慢说出来</h1><p class="subhead">这是一次非医疗的自我反思对话。</p></header>
         <div class="progress-card"><div><span>对话进度</span><strong>{{ userMessageCount }} <small>/ 10</small></strong></div><p v-if="messagesToReport">再写 {{ messagesToReport }} 段表达，即可生成专属报告</p><p v-else>你已积累足够的表达，可以生成一份回顾报告。</p></div>
       </div>
