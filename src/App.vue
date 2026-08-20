@@ -134,11 +134,15 @@ void selectTrack(selectedTrack.value)
     <section v-else-if="page === 'reports' && !report" class="list-card" aria-label="全部报告">
       <button class="back-button" type="button" @click="go('home')">← 返回首页</button>
       <header class="page-title"><p class="eyebrow">YOUR ARCHIVE</p><h1>我的报告</h1><p>每一份都是一次对刚才表达的回顾。</p></header>
-      <div v-if="!reports.length" class="empty-archive"><span>✦</span><h2>这里还没有报告</h2><p>完成 10 段文字表达后，就能生成第一份回顾。</p><button class="small-cta" type="button" @click="go('chat')">开始对话</button></div>
-      <article v-for="item in reports" v-else :key="item.id" class="archive-item">
-        <button class="archive-copy" type="button" :aria-label="`查看报告：${item.title}`" @click="showReport(item)"><span>{{ new Date(item.createdAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' }) }}</span><strong>{{ item.title }}</strong><small>{{ item.summary }}</small><b>查看报告 →</b></button>
-        <button class="make-card" type="button" :aria-label="`为报告生成卡牌：${item.title}`" @click="openCards(item)">生成卡牌 ✦</button>
-      </article>
+      <div class="archive-scroll" role="region" :aria-label="`报告列表，共 ${reports.length} 份`" tabindex="0">
+        <div v-if="!reports.length" class="empty-archive"><span>✦</span><h2>这里还没有报告</h2><p>完成 10 段文字表达后，就能生成第一份回顾。</p><button class="small-cta" type="button" @click="go('chat')">开始对话</button></div>
+        <template v-else>
+          <article v-for="item in reports" :key="item.id" class="archive-item">
+            <button class="archive-copy" type="button" :aria-label="`查看报告：${item.title}`" @click="showReport(item)"><span>{{ new Date(item.createdAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' }) }}</span><strong>{{ item.title }}</strong><small>{{ item.summary }}</small><b>查看报告 →</b></button>
+            <button class="make-card" type="button" :aria-label="`为报告生成卡牌：${item.title}`" @click="openCards(item)">生成卡牌 ✦</button>
+          </article>
+        </template>
+      </div>
     </section>
 
     <section v-else-if="page === 'cards' && cardReport && cardContent" class="card-studio" aria-label="我的卡牌">
