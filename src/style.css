@@ -138,9 +138,10 @@ h1 { margin: 7px 0 10px; font-size: clamp(28px, 8vw, 38px); line-height: 1.2; le
 
 .theme-nouveau { color: #3d302b; }
 .theme-nouveau::after { background: rgb(255 250 240 / 5%); }
-.theme-nouveau .share-card-meta, .theme-nouveau .share-card-copy small { color: #725435; }
-.theme-nouveau .share-card-copy { background: rgb(255 250 241 / 76%); }
-.theme-nouveau .share-card-copy p { color: #443732; }
+.theme-nouveau .share-card-meta, .theme-nouveau .share-card-copy small { color: #846a55; }
+.theme-nouveau .share-card-copy { background: rgb(255 250 241 / 68%); }
+.theme-nouveau .share-card-copy h2 { color: #5c4c44; font-weight: 700; }
+.theme-nouveau .share-card-copy p { color: #655750; font-weight: 500; }
 .theme-nouveau .share-card-keywords li { border-color: rgb(133 91 51 / 43%); color: #513d32; background: rgb(255 250 241 / 74%); }
 .theme-nouveau .share-card-frame footer small { color: #66564e; }.theme-nouveau .share-card-frame footer a { color: #3d302b; }
 .theme-cosmos .share-card-meta, .theme-cosmos .share-card-copy small { color: #e0bf7f; }
@@ -164,6 +165,7 @@ h1 { margin: 7px 0 10px; font-size: clamp(28px, 8vw, 38px); line-height: 1.2; le
 @media (min-width: 640px) {
   .app-shell { display: grid; min-height: 100vh; place-items: center; padding: 48px 16px; }
   .conversation-card, .report-card, .home-card, .list-card, .audio-card, .card-studio { min-height: 820px; padding: 32px; }
+  .card-studio { min-height: auto; padding-bottom: 20px; }
   .conversation-card { height: 820px; padding-bottom: 104px; }
   .conversation-card .back-button { top: 32px; left: 32px; }
   .conversation-card .composer { right: 32px; bottom: 32px; left: 32px; }

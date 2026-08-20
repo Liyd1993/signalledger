@@ -68,7 +68,7 @@ export function createShareCardContent(report: ArchivedReport, hostname: string)
 type Palette = { top: string; bottom: string; ink: string; muted: string; accent: string; panel: string }
 
 const palettes: Record<ShareCardTheme, Palette> = {
-  nouveau: { top: '#f7eee2', bottom: '#cfe9df', ink: '#392d2d', muted: '#655a55', accent: '#9a7046', panel: 'rgba(255,250,244,.78)' },
+  nouveau: { top: '#f7eee2', bottom: '#cfe9df', ink: '#5c4c44', muted: '#75665e', accent: '#9a7046', panel: 'rgba(255,250,244,.7)' },
   cosmos: { top: '#121412', bottom: '#24231f', ink: '#f6ecd4', muted: '#d2c5a7', accent: '#d3b171', panel: 'rgba(13,14,12,.7)' },
   holographic: { top: '#101923', bottom: '#202b35', ink: '#f8fbff', muted: '#d1deea', accent: '#84e5ef', panel: 'rgba(10,18,27,.72)' },
 }
@@ -112,11 +112,11 @@ export function drawShareCard(canvas: HTMLCanvasElement, content: ShareCardConte
 
   ctx.textAlign = 'center'; ctx.fillStyle = palette.accent; ctx.font = '700 30px system-ui, sans-serif'
   ctx.fillText(`ECHO CARD  ·  ${content.date}`, width / 2, 150)
-  ctx.fillStyle = palette.ink; ctx.font = '800 82px system-ui, sans-serif'
+  ctx.fillStyle = palette.ink; ctx.font = `${theme === 'nouveau' ? 700 : 800} 82px system-ui, sans-serif`
   ctx.fillText(content.archetype, width / 2, 500)
   ctx.fillStyle = palette.accent; ctx.font = '500 28px system-ui, sans-serif'; ctx.fillText('✦  MY INNER NOTE  ✦', width / 2, 566)
 
-  ctx.fillStyle = palette.ink; ctx.font = '600 46px system-ui, sans-serif'
+  ctx.fillStyle = palette.ink; ctx.font = `${theme === 'nouveau' ? 500 : 600} 46px system-ui, sans-serif`
   wrapLines(ctx, content.empathy, 690, 4).forEach((line, index) => ctx.fillText(line, width / 2, 690 + index * 68))
 
   ctx.font = '600 30px system-ui, sans-serif'
