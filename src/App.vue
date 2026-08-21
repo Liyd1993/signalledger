@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import ShareCardPreview from './components/ShareCardPreview.vue'
 import { ambientTracks, createWav, type AmbientTrack } from './lib/audio'
 import { archiveReport, loadReports } from './lib/reportArchive'
 import { createShareCardContent, downloadShareCard, shareCardThemes, type ShareCardTheme } from './lib/shareCard'
@@ -31,7 +32,10 @@ const currentTime = ref(0)
 const duration = ref(18)
 const messagesToReport = computed(() => Math.max(unlockAt.value - userMessageCount.value, 0))
 const cardContent = computed(() => cardReport.value ? createShareCardContent(cardReport.value, window.location.hostname) : null)
+const archivedReport = computed<ArchivedReport | null>(() => report.value && 'createdAt' in report.value ? report.value : null)
+const reportCardContent = computed(() => archivedReport.value ? createShareCardContent(archivedReport.value, window.location.hostname) : null)
 const selectedCardTheme = computed(() => shareCardThemes.find((theme) => theme.id === cardTheme.value) ?? shareCardThemes[0])
+const reportPreviewTheme = shareCardThemes[0]
 const introShift = ref(0)
 
 function go(next: Page) { report.value = null; cardReport.value = null; page.value = next }
@@ -148,15 +152,7 @@ void selectTrack(selectedTrack.value)
     <section v-else-if="page === 'cards' && cardReport && cardContent" class="card-studio" aria-label="我的卡牌">
       <button class="back-button" type="button" @click="go('reports')">← 回到报告列表</button>
       <header class="page-title card-title"><p class="eyebrow">SHARE YOUR NOTE</p><h1>我的卡牌</h1><p>同一份心情，选择你喜欢的背景。</p></header>
-      <article class="share-card-preview" :class="`theme-${cardTheme}`">
-        <img class="share-card-art" :src="selectedCardTheme.asset" alt="" />
-        <div class="share-card-frame">
-          <div class="share-card-meta"><span>ECHO CARD</span><time>{{ cardContent.date }}</time></div>
-          <div class="share-card-copy"><small>MY INNER NOTE</small><h2>{{ cardContent.archetype }}</h2><p>“{{ cardContent.empathy }}”</p></div>
-          <ul class="share-card-keywords"><li v-for="keyword in cardContent.keywords" :key="keyword">{{ keyword }}</li></ul>
-          <footer><small>基于一次真实表达生成 · 非医疗建议</small><a :href="siteOrigin" target="_blank" rel="noreferrer">EchoReport · {{ cardContent.website }}</a></footer>
-        </div>
-      </article>
+      <ShareCardPreview :content="cardContent" :theme="cardTheme" :asset="selectedCardTheme.asset" :site-href="siteOrigin" />
       <div class="theme-picker" role="group" aria-label="选择卡牌背景"><button v-for="theme in shareCardThemes" :key="theme.id" type="button" :class="{ active: theme.id === cardTheme }" :style="{ '--theme-thumb': `url(${theme.asset})` }" :aria-pressed="theme.id === cardTheme" @click="cardTheme = theme.id"><span></span>{{ theme.label }}</button></div>
       <button class="download-card" type="button" :disabled="isExporting" @click="exportCard">{{ isExporting ? '正在生成图片…' : '下载 3:4 PNG' }}</button>
       <p v-if="exportError" class="export-error" role="alert">{{ exportError }}</p>
@@ -171,6 +167,27 @@ void selectTrack(selectedTrack.value)
       <div class="track-list"><button v-for="track in ambientTracks" :key="track.id" type="button" :class="{ active: track.id === selectedTrack.id }" @click="selectTrack(track, true)"><span>{{ track.id === 'rain' ? '☂' : track.id === 'ocean' ? '◒' : track.id === 'stream' ? '≈' : track.id === 'forest' ? '♧' : '◉' }}</span><div><strong>{{ track.title }}</strong><small>{{ track.subtitle }}</small></div><b>{{ track.id === selectedTrack.id ? (isPlaying ? '正在播放' : '已选择') : '播放' }}</b></button></div><p v-if="audioError" class="audio-error" role="alert">{{ audioError }}</p><p class="audio-disclaimer">声音用于陪伴与放松，不替代医疗、心理治疗或紧急支持。</p>
     </section>
 
-    <section v-else class="report-card" aria-label="专属报告"><button class="back-button" type="button" @click="report = null; page = 'reports'">← 回到报告列表</button><div class="report-hero"><p class="eyebrow">YOUR REFLECTION</p><span>✦</span><h1>{{ report?.title }}</h1><p>这份报告只依据你刚才的表达生成。</p></div><article class="report-section"><h2>你表达出的感受</h2><p>{{ report?.feelings }}</p></article><article class="report-section evidence"><h2>对话里的线索</h2><blockquote v-for="line in report?.evidence" :key="line">“{{ line }}”</blockquote></article><article class="report-section"><h2>可以尝试的一小步</h2><p>{{ report?.nextStep }}</p></article><article class="report-section"><h2>下次可以继续聊</h2><p>{{ report?.nextQuestion }}</p></article><p class="report-disclaimer">这不是诊断、治疗或紧急服务。需要帮助时，请联系专业服务或可信任的人。</p></section>
+    <section v-else class="report-layout" aria-label="报告与分享卡牌">
+      <section class="report-card" aria-label="专属报告">
+        <button class="back-button" type="button" @click="report = null; page = 'reports'">← 回到报告列表</button>
+        <div class="report-hero"><p class="eyebrow">YOUR REFLECTION</p><span>✦</span><h1>{{ report?.title }}</h1><p>这份报告只依据你刚才的表达生成。</p></div>
+        <article class="report-section"><h2>你表达出的感受</h2><p>{{ report?.feelings }}</p></article>
+        <article class="report-section evidence"><h2>对话里的线索</h2><blockquote v-for="line in report?.evidence" :key="line">“{{ line }}”</blockquote></article>
+        <article class="report-section"><h2>可以尝试的一小步</h2><p>{{ report?.nextStep }}</p></article>
+        <article class="report-section"><h2>下次可以继续聊</h2><p>{{ report?.nextQuestion }}</p></article>
+        <a v-if="archivedReport && reportCardContent" class="report-mobile-card report-card-link" href="#card-studio" aria-label="查看并下载这张卡牌" @click.prevent="openCards(archivedReport)">
+          <ShareCardPreview :content="reportCardContent" :theme="reportPreviewTheme.id" :asset="reportPreviewTheme.asset" :site-link="false" />
+          <span class="report-card-action">查看并下载 →</span>
+        </a>
+        <p class="report-disclaimer">这不是诊断、治疗或紧急服务。需要帮助时，请联系专业服务或可信任的人。</p>
+      </section>
+      <aside v-if="archivedReport && reportCardContent" class="report-side-card" aria-label="这份报告生成的卡牌">
+        <p class="report-side-label">这份报告的分享卡牌</p>
+        <a class="report-card-link" href="#card-studio" aria-label="查看并下载这张卡牌" @click.prevent="openCards(archivedReport)">
+          <ShareCardPreview :content="reportCardContent" :theme="reportPreviewTheme.id" :asset="reportPreviewTheme.asset" :site-link="false" />
+          <span class="report-card-action">查看并下载 →</span>
+        </a>
+      </aside>
+    </section>
   </main>
 </template>
