@@ -1,0 +1,38 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SignalLedger, an evidence-backed product-decision agent
+Parameters:
+  DatabaseUrl:
+    Type: String
+    NoEcho: true
+  CockroachMcpUrl:
+    Type: String
+    Default: ''
+  SeedBucket:
+    Type: String
+Resources:
+  SignalLedgerApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: lambda_entry.handler
+      Runtime: python3.12
+      Timeout: 29
+      MemorySize: 512
+      Environment:
+        Variables:
+          DATABASE_URL: !Ref DatabaseUrl
+          COCKROACH_MCP_URL: !Ref CockroachMcpUrl
+          S3_BUCKET: !Ref SeedBucket
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref SeedBucket
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+Outputs:
+  SignalLedgerUrl:
+    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/'
