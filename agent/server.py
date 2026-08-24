@@ -12,9 +12,6 @@ import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
-from strands import Agent
-
-
 SYSTEM_PROMPT = """You are EchoReport, a non-clinical reflective conversation companion.
 Respond in Simplified Chinese, with warmth and brevity. Never diagnose, label,
 or claim to provide therapy. Ask one gentle follow-up question. If the user
@@ -25,7 +22,9 @@ understanding is unavailable.
 """
 
 
-def _agent() -> Agent:
+def _agent() -> Any:
+    from strands import Agent
+
     model_id = os.getenv("BEDROCK_MODEL_ID")
     kwargs: dict[str, Any] = {"system_prompt": SYSTEM_PROMPT}
     if model_id:
