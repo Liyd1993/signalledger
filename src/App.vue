@@ -154,7 +154,7 @@ void selectTrack(selectedTrack.value)
       <header class="page-title card-title"><p class="eyebrow">SHARE YOUR NOTE</p><h1>我的卡牌</h1><p>同一份心情，选择你喜欢的背景。</p></header>
       <ShareCardPreview :content="cardContent" :theme="cardTheme" :asset="selectedCardTheme.asset" :site-href="siteOrigin" />
       <div class="theme-picker" role="group" aria-label="选择卡牌背景"><button v-for="theme in shareCardThemes" :key="theme.id" type="button" :class="{ active: theme.id === cardTheme }" :style="{ '--theme-thumb': `url(${theme.asset})` }" :aria-pressed="theme.id === cardTheme" @click="cardTheme = theme.id"><span></span>{{ theme.label }}</button></div>
-      <button class="download-card" type="button" :disabled="isExporting" @click="exportCard">{{ isExporting ? '正在生成图片…' : '下载 3:4 PNG' }}</button>
+      <button class="download-card" type="button" :disabled="isExporting" @click="exportCard">{{ isExporting ? '正在生成图片…' : '下载 9:16 PNG' }}</button>
       <p v-if="exportError" class="export-error" role="alert">{{ exportError }}</p>
     </section>
 

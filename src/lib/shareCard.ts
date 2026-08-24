@@ -3,12 +3,14 @@ import type { ArchivedReport } from '../types'
 export type ShareCardTheme = 'nouveau' | 'cosmos' | 'holographic'
 
 export type ShareCardContent = {
-  archetype: string
-  empathy: string
+  quotes: string[]
   keywords: [string, string, string]
   date: string
   website: string
 }
+
+export const SHARE_CARD_WIDTH = 1080
+export const SHARE_CARD_HEIGHT = 1920
 
 export const shareCardThemes: { id: ShareCardTheme; label: string; asset: string }[] = [
   { id: 'nouveau', label: '新艺术晨光', asset: '/cards/art-nouveau-dawn.webp' },
@@ -16,8 +18,7 @@ export const shareCardThemes: { id: ShareCardTheme; label: string; asset: string
   { id: 'holographic', label: '虹光秘仪', asset: '/cards/holographic-arcana.webp' },
 ]
 
-const fallbackEmpathy = '你愿意停下来听见自己，这件事本身就很重要。'
-const forbiddenLabels = /你患有|你就是|典型人格|心理疾病|精神疾病/
+const fallbackQuote = '这一刻，我愿意听见自己的感受。'
 
 function hostnameFrom(value: string) {
   const raw = value.trim()
@@ -26,19 +27,17 @@ function hostnameFrom(value: string) {
   catch { return raw.split(/[/:]/)[0] || '127.0.0.1' }
 }
 
-function truncate(text: string, max = 44) {
-  const clean = text.replace(/\s+/g, '').trim()
-  if (forbiddenLabels.test(clean)) return fallbackEmpathy
-  if (clean.length <= max) return clean || fallbackEmpathy
+function truncateQuote(text: string, max = 38) {
+  const clean = text.replace(/\s+/g, ' ').trim()
+  if (clean.length <= max) return clean || fallbackQuote
   return `${clean.slice(0, max - 1)}…`
 }
 
-function deriveArchetype(source: string) {
-  if (/工作|压力|疲惫|累|休息|睡|空间/.test(source)) return '缓慢复原者'
-  if (/关系|家人|边界|拒绝|委屈/.test(source)) return '边界守望者'
-  if (/改变|开始|行动|尝试|决定/.test(source)) return '微光行动者'
-  if (/表达|理解|感受|说出来/.test(source)) return '真诚表达者'
-  return '认真感受的人'
+function dialogueQuotes(report: ArchivedReport) {
+  const source = report.evidence.length
+    ? report.evidence
+    : [report.summary || report.feelings || fallbackQuote]
+  return source.filter(Boolean).slice(0, 4).map((text) => truncateQuote(text))
 }
 
 function deriveKeywords(source: string): [string, string, string] {
@@ -55,22 +54,21 @@ function deriveKeywords(source: string): [string, string, string] {
 }
 
 export function createShareCardContent(report: ArchivedReport, hostname: string): ShareCardContent {
-  const source = [report.title, report.summary, report.feelings, report.nextStep].filter(Boolean).join(' ')
+  const source = [report.title, report.summary, report.feelings, report.nextStep, ...report.evidence].filter(Boolean).join(' ')
   return {
-    archetype: deriveArchetype(source),
-    empathy: truncate(report.feelings),
+    quotes: dialogueQuotes(report),
     keywords: deriveKeywords(source),
     date: new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric' }).format(new Date(report.createdAt)),
     website: hostnameFrom(hostname),
   }
 }
 
-type Palette = { top: string; bottom: string; ink: string; muted: string; accent: string; panel: string }
+type Palette = { top: string; bottom: string; ink: string; muted: string; accent: string }
 
 const palettes: Record<ShareCardTheme, Palette> = {
-  nouveau: { top: '#f7eee2', bottom: '#cfe9df', ink: '#5c4c44', muted: '#75665e', accent: '#9a7046', panel: 'rgba(255,250,244,.7)' },
-  cosmos: { top: '#121412', bottom: '#24231f', ink: '#f6ecd4', muted: '#d2c5a7', accent: '#d3b171', panel: 'rgba(13,14,12,.7)' },
-  holographic: { top: '#101923', bottom: '#202b35', ink: '#f8fbff', muted: '#d1deea', accent: '#84e5ef', panel: 'rgba(10,18,27,.72)' },
+  nouveau: { top: '#f7eee2', bottom: '#cfe9df', ink: '#5c4c44', muted: '#75665e', accent: '#9a7046' },
+  cosmos: { top: '#121412', bottom: '#24231f', ink: '#f6ecd4', muted: '#d2c5a7', accent: '#d3b171' },
+  holographic: { top: '#101923', bottom: '#202b35', ink: '#f8fbff', muted: '#d1deea', accent: '#84e5ef' },
 }
 
 function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
@@ -90,46 +88,48 @@ function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number
 }
 
 function drawCover(ctx: CanvasRenderingContext2D, image: CanvasImageSource, width: number, height: number) {
-  const sourceWidth = Number((image as { naturalWidth?: number; width?: number }).naturalWidth ?? (image as { width?: number }).width ?? width)
-  const sourceHeight = Number((image as { naturalHeight?: number; height?: number }).naturalHeight ?? (image as { height?: number }).height ?? height)
-  const scale = Math.max(width / sourceWidth, height / sourceHeight)
-  const drawWidth = sourceWidth * scale; const drawHeight = sourceHeight * scale
-  ctx.drawImage(image, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight)
+  ctx.drawImage(image, 0, 0, width, height)
 }
 
 export function drawShareCard(canvas: HTMLCanvasElement, content: ShareCardContent, theme: ShareCardTheme, background?: CanvasImageSource) {
-  const width = 1080; const height = 1440; const ctx = canvas.getContext('2d')
+  const width = SHARE_CARD_WIDTH; const height = SHARE_CARD_HEIGHT; const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('当前浏览器无法生成图片')
   const palette = palettes[theme]; canvas.width = width; canvas.height = height
   const gradient = ctx.createLinearGradient(0, 0, width, height)
   gradient.addColorStop(0, palette.top); gradient.addColorStop(1, palette.bottom)
   ctx.fillStyle = gradient; ctx.fillRect(0, 0, width, height)
-  if (background) { ctx.save(); ctx.globalAlpha = theme === 'nouveau' ? .68 : .78; drawCover(ctx, background, width, height); ctx.restore() }
+  if (background) { ctx.save(); ctx.globalAlpha = theme === 'nouveau' ? .9 : .92; drawCover(ctx, background, width, height); ctx.restore() }
 
   ctx.strokeStyle = palette.accent; ctx.lineWidth = 4
   roundedRect(ctx, 58, 58, width - 116, height - 116, 42); ctx.stroke()
-  ctx.fillStyle = palette.panel; roundedRect(ctx, 122, 340, width - 244, 720, 36); ctx.fill()
 
   ctx.textAlign = 'center'; ctx.fillStyle = palette.accent; ctx.font = '700 30px system-ui, sans-serif'
   ctx.fillText(`ECHO CARD  ·  ${content.date}`, width / 2, 150)
-  ctx.fillStyle = palette.ink; ctx.font = `${theme === 'nouveau' ? 700 : 800} 82px system-ui, sans-serif`
-  ctx.fillText(content.archetype, width / 2, 500)
-  ctx.fillStyle = palette.accent; ctx.font = '500 28px system-ui, sans-serif'; ctx.fillText('✦  MY INNER NOTE  ✦', width / 2, 566)
+  ctx.font = '700 26px system-ui, sans-serif'; ctx.fillText('O U R   W O R D S', width / 2, 640)
+  ctx.fillStyle = palette.ink; ctx.font = `${theme === 'nouveau' ? 700 : 800} 76px system-ui, sans-serif`
+  ctx.fillText('我们的话语', width / 2, 730)
 
-  ctx.fillStyle = palette.ink; ctx.font = `${theme === 'nouveau' ? 500 : 600} 46px system-ui, sans-serif`
-  wrapLines(ctx, content.empathy, 690, 4).forEach((line, index) => ctx.fillText(line, width / 2, 690 + index * 68))
+  ctx.fillStyle = palette.ink; ctx.font = `${theme === 'nouveau' ? 500 : 600} 44px system-ui, sans-serif`
+  content.quotes.forEach((quote, index) => {
+    const y = 900 + index * 185
+    wrapLines(ctx, quote, 800, 2).forEach((line, lineIndex) => ctx.fillText(line, width / 2, y + lineIndex * 60))
+    if (index < content.quotes.length - 1) {
+      ctx.save(); ctx.globalAlpha = .48; ctx.strokeStyle = palette.accent; ctx.lineWidth = 2
+      ctx.beginPath(); ctx.moveTo(330, y + 118); ctx.lineTo(750, y + 118); ctx.stroke(); ctx.restore()
+    }
+  })
 
   ctx.font = '600 30px system-ui, sans-serif'
   content.keywords.forEach((keyword, index) => {
     const x = 270 + index * 270
-    ctx.fillStyle = palette.accent; ctx.beginPath(); ctx.arc(x, 974, 8, 0, Math.PI * 2); ctx.fill()
-    ctx.fillStyle = palette.muted; ctx.fillText(keyword, x, 1030)
+    ctx.fillStyle = palette.accent; ctx.beginPath(); ctx.arc(x, 1668, 8, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = palette.muted; ctx.fillText(keyword, x, 1724)
   })
 
   ctx.fillStyle = palette.muted; ctx.font = '500 26px system-ui, sans-serif'
-  ctx.fillText('基于一次真实表达生成 · 非医疗建议', width / 2, 1244)
+  ctx.fillText('基于一次真实表达生成 · 非医疗建议', width / 2, 1778)
   ctx.fillStyle = palette.ink; ctx.font = '700 30px system-ui, sans-serif'
-  ctx.fillText(`EchoReport · ${content.website}`, width / 2, 1304)
+  ctx.fillText(`EchoReport · ${content.website}`, width / 2, 1830)
   return canvas
 }
 

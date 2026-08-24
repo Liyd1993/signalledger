@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createShareCardContent, shareCardThemes } from './shareCard'
+import { createShareCardContent, SHARE_CARD_HEIGHT, SHARE_CARD_WIDTH, shareCardThemes } from './shareCard'
 import type { ArchivedReport } from '../types'
 
 const report: ArchivedReport = {
@@ -18,30 +18,32 @@ describe('createShareCardContent', () => {
     expect(shareCardThemes.map((theme) => theme.id)).toEqual(['nouveau', 'cosmos', 'holographic'])
   })
 
-  it('derives stable, non-diagnostic share copy', () => {
+  it('uses up to four real dialogue excerpts', () => {
+    const evidence = ['第一句', '第二句', '第三句', '第四句', '第五句']
     expect(createShareCardContent(report, 'https://example.com/path')).toMatchObject({
-      archetype: '缓慢复原者',
       website: 'example.com',
       keywords: ['松弛', '边界', '照顾自己'],
     })
+    const result = createShareCardContent({ ...report, evidence }, 'example.com')
+    expect(result.quotes).toEqual(evidence.slice(0, 4))
+    expect('archetype' in result).toBe(false)
+    expect('empathy' in result).toBe(false)
   })
 
-  it('keeps empathy copy within 44 Chinese characters', () => {
-    const result = createShareCardContent({ ...report, feelings: '很长'.repeat(80) }, 'example.com')
-    expect(result.empathy.length).toBeLessThanOrEqual(44)
-    expect(result.empathy.endsWith('…')).toBe(true)
+  it('keeps each excerpt within 38 Chinese characters', () => {
+    const result = createShareCardContent({ ...report, evidence: ['很长'.repeat(80)] }, 'example.com')
+    expect(result.quotes[0].length).toBeLessThanOrEqual(38)
+    expect(result.quotes[0].endsWith('…')).toBe(true)
   })
 
-  it('falls back to safe copy, three keywords, and localhost hostname', () => {
-    const result = createShareCardContent({ ...report, title: '', feelings: '', nextStep: '', summary: '' }, '')
-    expect(result.archetype).toBe('认真感受的人')
-    expect(result.empathy).toBe('你愿意停下来听见自己，这件事本身就很重要。')
+  it('falls back to report copy, three keywords, and localhost hostname', () => {
+    const result = createShareCardContent({ ...report, evidence: [], title: '', feelings: '', nextStep: '', summary: '' }, '')
+    expect(result.quotes).toEqual(['这一刻，我愿意听见自己的感受。'])
     expect(result.keywords).toEqual(['觉察', '温柔', '向前'])
     expect(result.website).toBe('127.0.0.1')
   })
 
-  it('never emits diagnostic labels', () => {
-    const result = createShareCardContent({ ...report, feelings: '你患有焦虑，你就是典型人格。' }, 'example.com')
-    expect(result.empathy).not.toMatch(/患有|典型人格|你就是/)
+  it('exports the approved 9:16 dimensions', () => {
+    expect([SHARE_CARD_WIDTH, SHARE_CARD_HEIGHT]).toEqual([1080, 1920])
   })
 })

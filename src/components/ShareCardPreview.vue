@@ -15,7 +15,11 @@ withDefaults(defineProps<{
     <img class="share-card-art" :src="asset" alt="" />
     <div class="share-card-frame">
       <div class="share-card-meta"><span>ECHO CARD</span><time>{{ content.date }}</time></div>
-      <div class="share-card-copy"><small>MY INNER NOTE</small><h2>{{ content.archetype }}</h2><p>“{{ content.empathy }}”</p></div>
+      <div class="share-card-dialogue">
+        <small>OUR WORDS</small>
+        <h2>我们的话语</h2>
+        <ul class="share-card-quotes"><li v-for="quote in content.quotes" :key="quote">{{ quote }}</li></ul>
+      </div>
       <ul class="share-card-keywords"><li v-for="keyword in content.keywords" :key="keyword">{{ keyword }}</li></ul>
       <footer>
         <small>基于一次真实表达生成 · 非医疗建议</small>
