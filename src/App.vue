@@ -4,6 +4,7 @@ import ShareCardPreview from './components/ShareCardPreview.vue'
 import { ambientTracks, createWav, type AmbientTrack } from './lib/audio'
 import { archiveReport, loadReports } from './lib/reportArchive'
 import { createShareCardContent, downloadShareCard, shareCardThemes, type ShareCardTheme } from './lib/shareCard'
+import { agentEnabled } from './lib/agentApi'
 import { createConversation } from './stores/conversation'
 import type { ArchivedReport, ReflectionReport } from './types'
 
@@ -39,9 +40,9 @@ const reportPreviewTheme = shareCardThemes[0]
 const introShift = ref(0)
 
 function go(next: Page) { report.value = null; cardReport.value = null; page.value = next }
-function send() { conversation.send(draft.value); draft.value = '' }
-function openReport() {
-  const created = conversation.createCurrentReport()
+async function send() { const text = draft.value; draft.value = ''; agentEnabled ? await conversation.sendWithAgent(text) : conversation.send(text) }
+async function openReport() {
+  const created = agentEnabled ? await conversation.createCurrentReportWithAgent() : conversation.createCurrentReport()
   if (!created) return
   report.value = archiveReport(created); reports.value = loadReports()
 }

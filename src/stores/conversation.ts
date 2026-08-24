@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { createReport } from '../lib/report'
+import { askAgent, generateAgentReport } from '../lib/agentApi'
 import { isRiskMessage } from '../lib/safety'
 import type { Message } from '../types'
 
@@ -34,6 +35,20 @@ export function createConversation() {
     })
   }
 
+  const sendWithAgent = async (text: string) => {
+    const clean = text.trim()
+    if (!clean || crisisActive.value) return
+    messages.value.push({ id: crypto.randomUUID(), role: 'user', kind: 'text', text: clean })
+    crisisActive.value = isRiskMessage(clean)
+    if (crisisActive.value) return
+    try {
+      const response = await askAgent(clean, messages.value.slice(-10))
+      messages.value.push({ id: crypto.randomUUID(), role: 'assistant', kind: 'text', text: response.text })
+    } catch {
+      messages.value.push({ id: crypto.randomUUID(), role: 'assistant', kind: 'text', text: companionReplies[(userMessageCount.value - 1) % companionReplies.length] })
+    }
+  }
+
   const sendImage = (imageUrl: string, fileName: string) => {
     if (!imageUrl || crisisActive.value) return
     messages.value.push({ id: crypto.randomUUID(), role: 'user', kind: 'image', imageUrl, text: fileName })
@@ -51,5 +66,15 @@ export function createConversation() {
     return createReport(messages.value)
   }
 
-  return { messages, crisisActive, userMessageCount, unlockAt, canCreateReport, send, sendImage, createCurrentReport }
+  const createCurrentReportWithAgent = async () => {
+    if (!canCreateReport.value) return null
+    lastReportAt.value = userMessageCount.value
+    try {
+      return await generateAgentReport(messages.value)
+    } catch {
+      return createReport(messages.value)
+    }
+  }
+
+  return { messages, crisisActive, userMessageCount, unlockAt, canCreateReport, send, sendWithAgent, sendImage, createCurrentReport, createCurrentReportWithAgent }
 }

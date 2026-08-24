@@ -1,0 +1,10 @@
+flowchart LR
+  User[User] --> UI[Vue 3 web UI]
+  UI -->|conversation + report JSON| API[Python HTTP service]
+  API --> LOOP[Strands Agent loop]
+  LOOP --> PROMPT[Safety + reflection prompt]
+  LOOP --> MODEL[AWS Bedrock model]
+  LOOP --> OUTPUT[Chat reply / reflection report]
+  OUTPUT --> UI
+  UI --> CARD[9:16 share card PNG]
+  UI --> STORE[Browser localStorage archive]

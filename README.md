@@ -1,30 +1,59 @@
-# EchoReport
+# EchoReport — a reflective agent for real conversations
 
-一个用于演示“10 条用户表达后可选生成对话回顾报告”的 Vue Web App。
+EchoReport helps a person slow down, name what they are carrying, and turn ten short expressions into a private reflection report and a shareable keepsake card. It is intentionally non-clinical: it does not diagnose, treat, or replace emergency support.
 
-## 当前功能
+## Why this matters
 
-- D「晨光拼贴」风格首页：进入对话、报告归档或声音陪伴。
-- 固定高度、可滚动的对话转录区；可添加图片，图片不计入 10 段文字表达。
-- 生成后的报告保存在当前浏览器的 `localStorage`，可在“我的报告”中再次打开。
-- 三段由浏览器即时合成的原创 WAV 环境声音，可用原生播放器播放；不包含第三方音乐素材。
+People often know they are overwhelmed before they know how to explain it. EchoReport gives them a low-pressure conversation, a concrete next step, and a visual artifact they can keep or share. The target audience is adults who want structured self-reflection, not medical advice.
 
-## 运行
+## Architecture
+
+The production path uses the Strands Agents SDK with an AWS Bedrock model. The Vue client sends conversation turns to the Python service in `agent/`. The service owns the safety prompt and report schema, then returns the agent response. See [`docs/architecture.mmd`](docs/architecture.mmd) and [`docs/testing.md`](docs/testing.md).
+
+## Local development
+
+### UI-only mode
 
 ```bash
 npm install
 npm run dev
 ```
 
-验证：
+Without `VITE_AGENT_API_URL`, the browser uses a clearly scoped deterministic fallback so the layout and safety states can be tested offline. This fallback is not the production AI implementation.
+
+### Strands agent mode
+
+Requirements: Python 3.10+, AWS credentials with Bedrock model access, and a model available in your region.
 
 ```bash
-npm test
-npm run build
+cd agent
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+python3 server.py
 ```
 
-## 边界
+In another terminal:
 
-这是自我反思演示，不是医疗建议、诊断、治疗或紧急服务。内容保存在当前浏览器内存中，不会上传。检测到少量高风险短语时，界面会停止常规流程，并提示用户联系可信任的人、当地紧急服务或中国心理援助热线 12356。
+```bash
+VITE_AGENT_API_URL=http://127.0.0.1:8787 npm run dev
+```
 
-当前 AI 回复、图片回复和报告由明确标注的本地确定性模拟逻辑生成，便于开发和测试。图片会显示在当前对话中，但不会计入 10 条文字表达；开发版不会声称理解图片语义。部署时将把同一接口替换为腾讯 TokenHub 的多模态模型，并把密钥放在云函数环境变量中；接入真实模型前需要单独完成隐私与安全评审。
+The service exposes `GET /health`, `POST /api/chat`, and `POST /api/report`. No secret is placed in the frontend bundle. For deployment, put credentials in the server environment or an AWS-managed secret store; never commit them.
+
+## Verification
+
+```bash
+npm test -- --run
+npm run build
+python3 -m py_compile agent/server.py
+```
+
+## Safety and data boundaries
+
+The app stores demo conversations in browser `localStorage`. Do not enter real medical records or another person's private information. The agent prompt disallows diagnosis and asks for local emergency help when imminent harm is described. Before a public deployment, configure retention, access controls, logging redaction, and a privacy notice appropriate to the chosen provider.
+
+## Hackathon disclosure
+
+The project is a new submission. Third-party SDKs are used under their own licenses; this repository is released under Apache-2.0. The public demo should include a working video, architecture diagram, English testing instructions, and this public repository.
