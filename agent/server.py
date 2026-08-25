@@ -28,7 +28,14 @@ def _agent() -> Any:
     provider = os.getenv("MODEL_PROVIDER", "tencent").lower()
     model_id = os.getenv("BEDROCK_MODEL_ID")
     kwargs: dict[str, Any] = {"system_prompt": SYSTEM_PROMPT}
-    if provider == "tencent":
+    if provider == "ollama":
+        from strands.models.ollama import OllamaModel
+
+        kwargs["model"] = OllamaModel(
+            host=os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434"),
+            model_id=os.getenv("OLLAMA_MODEL_ID", "qwen2.5:7b"),
+        )
+    elif provider == "tencent":
         from strands.models.openai import OpenAIModel
 
         api_key = os.getenv("TENCENT_API_KEY") or os.getenv("OPENAI_API_KEY")

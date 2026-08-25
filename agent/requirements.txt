@@ -1,1 +1,1 @@
-strands-agents[openai]>=1.8,<2
+strands-agents[ollama,openai]>=1.8,<2

@@ -8,7 +8,7 @@ People often know they are overwhelmed before they know how to explain it. EchoR
 
 ## Architecture
 
-The production path uses the Strands Agents SDK with Tencent Token Plan's OpenAI-compatible endpoint (`hy3`). The Vue client sends conversation turns to the Python service in `agent/`. The service owns the safety prompt and report schema, then returns the agent response. Bedrock remains an optional provider. See [`docs/architecture.mmd`](docs/architecture.mmd) and [`docs/testing.md`](docs/testing.md).
+The free local path uses the Strands Agents SDK with an Ollama model. Tencent Token Plan (`hy3`) and Bedrock remain optional providers. The Vue client sends conversation turns to the Python service in `agent/`. The service owns the safety prompt and report schema, then returns the agent response. See [`docs/architecture.mmd`](docs/architecture.mmd) and [`docs/testing.md`](docs/testing.md).
 
 ## Local development
 
@@ -23,7 +23,7 @@ Without `VITE_AGENT_API_URL`, the browser uses a clearly scoped deterministic fa
 
 ### Strands agent mode
 
-Requirements: Python 3.10+, a Tencent Hunyuan API key, and an enabled model. An AWS account and Builder ID are still required by the hackathon; Bedrock credentials are optional for this implementation.
+Requirements: Python 3.10+, Ollama, and a local model. An AWS account and Builder ID are still required by the hackathon; paid model credentials are optional for this implementation.
 
 ```bash
 cd agent
@@ -31,6 +31,8 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
+ollama pull qwen2.5:7b
+ollama serve
 python3 server.py
 ```
 
