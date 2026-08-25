@@ -33,7 +33,7 @@ def _agent() -> Any:
 
         kwargs["model"] = OllamaModel(
             host=os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434"),
-            model_id=os.getenv("OLLAMA_MODEL_ID", "qwen2.5:7b"),
+            model_id=os.getenv("OLLAMA_MODEL_ID", "gemma4:12b"),
         )
     elif provider == "tencent":
         from strands.models.openai import OpenAIModel
