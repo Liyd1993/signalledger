@@ -11,7 +11,7 @@ import type { ArchivedReport, ReflectionReport } from './types'
 type Page = 'home' | 'chat' | 'reports' | 'cards' | 'audio'
 const page = ref<Page>('home')
 const conversation = createConversation()
-const { messages, crisisActive, userMessageCount, unlockAt, canCreateReport } = conversation
+const { messages, crisisActive, isResponding, userMessageCount, unlockAt, canCreateReport } = conversation
 const draft = ref('')
 const report = ref<ReflectionReport | ArchivedReport | null>(null)
 const reports = ref<ArchivedReport[]>(loadReports())
@@ -129,11 +129,11 @@ void selectTrack(selectedTrack.value)
         <header class="hero"><div class="mark">✦</div><p class="eyebrow">ECHO REPORT</p><h1>把现在的心情，<br />慢慢说出来</h1><p class="subhead">这是一次非医疗的自我反思对话。</p></header>
         <div class="progress-card"><div><span>对话进度</span><strong>{{ userMessageCount }} <small>/ 10</small></strong></div><p v-if="messagesToReport">再写 {{ messagesToReport }} 段表达，即可生成专属报告</p><p v-else>你已积累足够的表达，可以生成一份回顾报告。</p></div>
       </div>
-      <div ref="transcript" class="transcript" :class="{ 'has-report-cta': canCreateReport && !crisisActive }" aria-live="polite"><div class="message-stack"><p v-if="!messages.length" class="empty-state">从此刻最想说的一件小事开始也可以。</p><div v-for="message in messages" :key="message.id" class="message" :class="message.role"><img v-if="message.kind === 'image' && message.imageUrl" :src="message.imageUrl" :alt="message.text || '用户上传的图片'" /><template v-else>{{ message.text }}</template></div></div></div>
+      <div ref="transcript" class="transcript" :class="{ 'has-report-cta': canCreateReport && !crisisActive }" aria-live="polite"><div class="message-stack"><p v-if="!messages.length" class="empty-state">从此刻最想说的一件小事开始也可以。</p><div v-for="message in messages" :key="message.id" class="message" :class="message.role"><img v-if="message.kind === 'image' && message.imageUrl" :src="message.imageUrl" :alt="message.text || '用户上传的图片'" /><template v-else>{{ message.text }}</template></div><div v-if="isResponding" class="message assistant loading-message" role="status" aria-live="polite"><span class="loading-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>正在思考…</span></div></div></div>
       <aside v-if="crisisActive" class="crisis-card" role="alert"><span>✦</span><div><strong>你现在的安全最重要</strong><p>请优先联系身边可信任的人、当地紧急服务，或中国心理援助热线 12356。</p></div></aside>
       <button v-else-if="canCreateReport" class="report-cta" type="button" @click="openReport"><span>✦</span> 生成我的专属报告</button>
       <div v-if="pendingImage" class="image-preview"><img :src="pendingImage" :alt="pendingImageName" /><span>{{ pendingImageName }}</span><button type="button" class="text-button" @click="pendingImage = null">移除</button><button type="button" class="send-image" @click="sendImage">发送图片</button></div>
-      <form v-if="!crisisActive" class="composer" @submit.prevent="send"><label class="image-picker" title="添加图片"><span>＋</span><input type="file" accept="image/png,image/jpeg,image/webp" @change="selectImage" /></label><input v-model="draft" aria-label="输入想说的话" maxlength="200" placeholder="想从哪里开始说？" /><button type="submit" :disabled="!draft.trim()">发送</button></form>
+      <form v-if="!crisisActive" class="composer" @submit.prevent="send"><label class="image-picker" title="添加图片"><span>＋</span><input type="file" accept="image/png,image/jpeg,image/webp" @change="selectImage" /></label><input v-model="draft" aria-label="输入想说的话" maxlength="200" placeholder="想从哪里开始说？" :disabled="isResponding" /><button type="submit" :disabled="!draft.trim() || isResponding">{{ isResponding ? '思考中' : '发送' }}</button></form>
     </section>
 
     <section v-else-if="page === 'reports' && !report" class="list-card" aria-label="全部报告">

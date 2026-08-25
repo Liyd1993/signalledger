@@ -13,6 +13,7 @@ const companionReplies = [
 export function createConversation() {
   const messages = ref<Message[]>([])
   const crisisActive = ref(false)
+  const isResponding = ref(false)
   const lastReportAt = ref(0)
 
   const userMessageCount = computed(() => messages.value.filter((message) => message.role === 'user' && message.kind === 'text').length)
@@ -21,7 +22,7 @@ export function createConversation() {
 
   const send = (text: string) => {
     const clean = text.trim()
-    if (!clean || crisisActive.value) return
+    if (!clean || crisisActive.value || isResponding.value) return
 
     messages.value.push({ id: crypto.randomUUID(), role: 'user', kind: 'text', text: clean })
     crisisActive.value = isRiskMessage(clean)
@@ -41,11 +42,14 @@ export function createConversation() {
     messages.value.push({ id: crypto.randomUUID(), role: 'user', kind: 'text', text: clean })
     crisisActive.value = isRiskMessage(clean)
     if (crisisActive.value) return
+    isResponding.value = true
     try {
       const response = await askAgent(clean, messages.value.slice(-10))
       messages.value.push({ id: crypto.randomUUID(), role: 'assistant', kind: 'text', text: response.text })
     } catch {
       messages.value.push({ id: crypto.randomUUID(), role: 'assistant', kind: 'text', text: companionReplies[(userMessageCount.value - 1) % companionReplies.length] })
+    } finally {
+      isResponding.value = false
     }
   }
 
@@ -76,5 +80,5 @@ export function createConversation() {
     }
   }
 
-  return { messages, crisisActive, userMessageCount, unlockAt, canCreateReport, send, sendWithAgent, sendImage, createCurrentReport, createCurrentReportWithAgent }
+  return { messages, crisisActive, isResponding, userMessageCount, unlockAt, canCreateReport, send, sendWithAgent, sendImage, createCurrentReport, createCurrentReportWithAgent }
 }
