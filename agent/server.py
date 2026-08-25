@@ -70,6 +70,9 @@ Return JSON only with keys: title, feelings, evidence (array of up to 3 exact
 user phrases), nextStep, nextQuestion. Keep it non-clinical and actionable.
 Messages:\n""" + json.dumps(messages, ensure_ascii=False)
     raw = _text(_agent()(prompt))
+    if raw.startswith("```"):
+        raw = raw.split("\n", 1)[1] if "\n" in raw else raw
+        raw = raw.rsplit("```", 1)[0].strip()
     try:
         data = json.loads(raw)
     except json.JSONDecodeError:
