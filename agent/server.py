@@ -25,6 +25,22 @@ SYSTEM_PROMPT = """你叫小野，是 EchoReport 中温和、专业的心理支�
 """
 
 MEMORY_DB = Path(os.getenv("ECHOREPORT_MEMORY_DB", Path(__file__).with_name("memory.db")))
+PROMPT_ROOT = Path("/Volumes/文档/公司/赛尔教育/心澄 Prompt/提示词/04_当前活跃提示词")
+CONVERSATION_PROMPT = PROMPT_ROOT / "对话_晓青/对话节点_v2.7.md"
+STRATEGY_PROMPT = PROMPT_ROOT / "对话_晓青/策略节点_v2.7.md"
+REPORT_PROMPT = PROMPT_ROOT / "对话报告-分析报告.yml"
+
+
+def _source_prompt(path: Path, fallback: str) -> str:
+    """Read the supplied source prompt locally, with a safe deploy fallback."""
+    # The exported Dify YAML contains workflow metadata but its LLM prompt
+    # field is empty, so it is not executable prompt text.
+    if path == REPORT_PROMPT:
+        return fallback
+    try:
+        return path.read_text(encoding="utf-8").replace("晓青", "小野")
+    except (OSError, UnicodeError):
+        return fallback
 
 
 def _memory_connection() -> sqlite3.Connection:
@@ -60,12 +76,12 @@ def save_memory(note: str, user_id: str = "local-user") -> str:
     return "已保存一条长期记忆"
 
 
-def _agent() -> Any:
+def _agent(system_prompt: str = SYSTEM_PROMPT) -> Any:
     from strands import Agent, tool
 
     provider = os.getenv("MODEL_PROVIDER", "tencent").lower()
     model_id = os.getenv("BEDROCK_MODEL_ID")
-    kwargs: dict[str, Any] = {"system_prompt": SYSTEM_PROMPT}
+    kwargs: dict[str, Any] = {"system_prompt": system_prompt}
 
     @tool
     def retrieve_memory(query: str) -> str:
@@ -110,8 +126,14 @@ def chat(payload: dict[str, Any]) -> dict[str, str]:
         raise ValueError("text is required")
     context = payload.get("context", [])
     memories = retrieve_memories(text)
-    prompt = f"观察到的长期记忆（可能为空）：{json.dumps(memories, ensure_ascii=False)}\nPrevious turns (use only as context): {json.dumps(context, ensure_ascii=False)}\nUser: {text}"
-    response = _text(_agent()(prompt))
+    history = json.dumps(context, ensure_ascii=False)
+    strategy_fallback = "你是心理支持对话的策略分析节点。只输出JSON，包含 safety_alert、analysis、direction、reply_style。"
+    strategy_prompt = _source_prompt(STRATEGY_PROMPT, strategy_fallback)
+    strategy_input = strategy_prompt.replace("{{#1730898300872.user_profile#}}", json.dumps(memories, ensure_ascii=False)).replace("{{#1730898300872.recent_messages#}}", history).replace("{{#sys.query#}}", text)
+    strategy_raw = _text(_agent(strategy_prompt)(strategy_input))
+    conversation_prompt = _source_prompt(CONVERSATION_PROMPT, SYSTEM_PROMPT)
+    conversation_input = f"用户资料/长期记忆：{json.dumps(memories, ensure_ascii=False)}\n对话历史：{history}\n用户本轮输入：{text}\n策略节点JSON：{strategy_raw}"
+    response = _text(_agent(conversation_prompt)(conversation_input))
     # Keep a private, local conversation trace even when the model chooses not
     # to call the optional save_memory tool; retrieval remains model-driven.
     save_memory(f"用户表达：{text}")
@@ -121,12 +143,10 @@ def chat(payload: dict[str, Any]) -> dict[str, str]:
 def report(payload: dict[str, Any]) -> dict[str, Any]:
     messages = payload.get("messages", [])
     memories = retrieve_memories(" ".join(str(item.get("text", "")) for item in messages if isinstance(item, dict)))
-    prompt = """Create a concise reflection report from the user's messages.
-Return JSON only with keys: title, feelings, evidence (array of up to 3 exact
-user phrases), nextStep, nextQuestion. Keep it non-clinical and actionable.
-Use the long-term memories only as supporting context, never as evidence.
-Long-term memories:\n""" + json.dumps(memories, ensure_ascii=False) + "\nMessages:\n" + json.dumps(messages, ensure_ascii=False)
-    raw = _text(_agent()(prompt))
+    report_fallback = """你是小野，负责生成非医疗性的心理反思报告。请严格只输出JSON，字段为title、content、emoji、continue。content应包含对话总结、心理分析、温和的安慰与下一步思考，不要诊断或过度解读。"""
+    report_prompt = _source_prompt(REPORT_PROMPT, report_fallback)
+    prompt = report_prompt + "\n\n请基于以下本次对话生成结构化JSON。\n长期记忆（仅作背景）：" + json.dumps(memories, ensure_ascii=False) + "\nMessages:\n" + json.dumps(messages, ensure_ascii=False)
+    raw = _text(_agent(report_prompt)(prompt))
     if raw.startswith("```"):
         raw = raw.split("\n", 1)[1] if "\n" in raw else raw
         raw = raw.rsplit("```", 1)[0].strip()
@@ -134,6 +154,14 @@ Long-term memories:\n""" + json.dumps(memories, ensure_ascii=False) + "\nMessage
         data = json.loads(raw)
     except json.JSONDecodeError:
         data = {"title": "这一段想慢慢说的话", "feelings": raw, "evidence": [], "nextStep": "先给自己两分钟安静时间。", "nextQuestion": "此刻最希望被理解的是什么？"}
+    if "content" in data:
+        data = {
+            "title": data.get("title", "这一段想慢慢说的话"),
+            "feelings": data.get("content", ""),
+            "evidence": data.get("evidence", []),
+            "nextStep": data.get("nextStep", "先给自己两分钟安静时间。"),
+            "nextQuestion": data.get("continue", data.get("nextQuestion", "此刻最希望被理解的是什么？")),
+        }
     return data
 
 
