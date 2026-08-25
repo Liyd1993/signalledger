@@ -35,8 +35,8 @@ def _agent() -> Any:
         if not api_key:
             raise RuntimeError("TENCENT_API_KEY is required when MODEL_PROVIDER=tencent")
         kwargs["model"] = OpenAIModel(
-            client_args={"api_key": api_key, "base_url": os.getenv("TENCENT_BASE_URL", "https://api.hunyuan.cloud.tencent.com/v1")},
-            model_id=os.getenv("TENCENT_MODEL_ID", "hunyuan-turbos-latest"),
+            client_args={"api_key": api_key, "base_url": os.getenv("TENCENT_BASE_URL", "https://api.lkeap.cloud.tencent.com/plan/v3")},
+            model_id=os.getenv("TENCENT_MODEL_ID", "hy3"),
         )
     elif model_id:
         kwargs["model"] = model_id

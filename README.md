@@ -8,7 +8,7 @@ People often know they are overwhelmed before they know how to explain it. EchoR
 
 ## Architecture
 
-The production path uses the Strands Agents SDK with Tencent Hunyuan's OpenAI-compatible endpoint. The Vue client sends conversation turns to the Python service in `agent/`. The service owns the safety prompt and report schema, then returns the agent response. Bedrock remains an optional provider. See [`docs/architecture.mmd`](docs/architecture.mmd) and [`docs/testing.md`](docs/testing.md).
+The production path uses the Strands Agents SDK with Tencent Token Plan's OpenAI-compatible endpoint (`hy3`). The Vue client sends conversation turns to the Python service in `agent/`. The service owns the safety prompt and report schema, then returns the agent response. Bedrock remains an optional provider. See [`docs/architecture.mmd`](docs/architecture.mmd) and [`docs/testing.md`](docs/testing.md).
 
 ## Local development
 
