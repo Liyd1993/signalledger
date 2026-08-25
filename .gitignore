@@ -4,4 +4,5 @@ agent/.venv/
 agent/__pycache__/
 *.pyc
 .env
+agent/memory.db
 .superpowers/
