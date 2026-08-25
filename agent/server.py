@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
+from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
@@ -18,15 +20,64 @@ SYSTEM_PROMPT = """你叫小野，是 EchoReport 中温和、专业的心理支�
 更清楚地理解自己的感受。如果用户描述正在发生的自伤或伤害他人的风险，立即鼓励
 联系当地紧急服务或可信任的人，并停止普通的反思对话。不要臆测上传图片的内容；
 无法理解图片时要明确说明。
+这是一个受约束的 ReAct 流程：先调用 retrieve_memory，再基于观察结果回应；
+如果用户表达了稳定、未来仍有价值的偏好或经历，调用 save_memory 保存一句简短事实。
 """
+
+MEMORY_DB = Path(os.getenv("ECHOREPORT_MEMORY_DB", Path(__file__).with_name("memory.db")))
+
+
+def _memory_connection() -> sqlite3.Connection:
+    connection = sqlite3.connect(MEMORY_DB)
+    connection.execute("CREATE TABLE IF NOT EXISTS memories (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, note TEXT NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP)")
+    return connection
+
+
+def retrieve_memories(query: str, user_id: str = "local-user") -> list[str]:
+    terms = [term for term in query.strip().split() if len(term) > 1][:6]
+    connection = _memory_connection()
+    try:
+        if not terms:
+            rows = connection.execute("SELECT note FROM memories WHERE user_id = ? ORDER BY id DESC LIMIT 5", (user_id,)).fetchall()
+        else:
+            pattern = "%" + "%".join(terms) + "%"
+            rows = connection.execute("SELECT note FROM memories WHERE user_id = ? AND note LIKE ? ORDER BY id DESC LIMIT 5", (user_id, pattern)).fetchall()
+        return [str(row[0]) for row in rows]
+    finally:
+        connection.close()
+
+
+def save_memory(note: str, user_id: str = "local-user") -> str:
+    clean = " ".join(note.strip().split())[:240]
+    if not clean:
+        return "未保存：记忆内容为空"
+    connection = _memory_connection()
+    try:
+        connection.execute("INSERT INTO memories (user_id, note) VALUES (?, ?)", (user_id, clean))
+        connection.commit()
+    finally:
+        connection.close()
+    return "已保存一条长期记忆"
 
 
 def _agent() -> Any:
-    from strands import Agent
+    from strands import Agent, tool
 
     provider = os.getenv("MODEL_PROVIDER", "tencent").lower()
     model_id = os.getenv("BEDROCK_MODEL_ID")
     kwargs: dict[str, Any] = {"system_prompt": SYSTEM_PROMPT}
+
+    @tool
+    def retrieve_memory(query: str) -> str:
+        """Retrieve relevant long-term memories from this local user's private memory store."""
+        return json.dumps(retrieve_memories(query), ensure_ascii=False)
+
+    @tool
+    def save_memory_tool(note: str) -> str:
+        """Save one concise, non-sensitive fact that may help future conversations."""
+        return save_memory(note)
+
+    kwargs["tools"] = [retrieve_memory, save_memory_tool]
     if provider == "ollama":
         from strands.models.ollama import OllamaModel
 
@@ -58,16 +109,23 @@ def chat(payload: dict[str, Any]) -> dict[str, str]:
     if not text:
         raise ValueError("text is required")
     context = payload.get("context", [])
-    prompt = f"Previous turns (use only as context): {json.dumps(context, ensure_ascii=False)}\nUser: {text}"
-    return {"text": _text(_agent()(prompt))}
+    memories = retrieve_memories(text)
+    prompt = f"观察到的长期记忆（可能为空）：{json.dumps(memories, ensure_ascii=False)}\nPrevious turns (use only as context): {json.dumps(context, ensure_ascii=False)}\nUser: {text}"
+    response = _text(_agent()(prompt))
+    # Keep a private, local conversation trace even when the model chooses not
+    # to call the optional save_memory tool; retrieval remains model-driven.
+    save_memory(f"用户表达：{text}")
+    return {"text": response}
 
 
 def report(payload: dict[str, Any]) -> dict[str, Any]:
     messages = payload.get("messages", [])
+    memories = retrieve_memories(" ".join(str(item.get("text", "")) for item in messages if isinstance(item, dict)))
     prompt = """Create a concise reflection report from the user's messages.
 Return JSON only with keys: title, feelings, evidence (array of up to 3 exact
 user phrases), nextStep, nextQuestion. Keep it non-clinical and actionable.
-Messages:\n""" + json.dumps(messages, ensure_ascii=False)
+Use the long-term memories only as supporting context, never as evidence.
+Long-term memories:\n""" + json.dumps(memories, ensure_ascii=False) + "\nMessages:\n" + json.dumps(messages, ensure_ascii=False)
     raw = _text(_agent()(prompt))
     if raw.startswith("```"):
         raw = raw.split("\n", 1)[1] if "\n" in raw else raw
