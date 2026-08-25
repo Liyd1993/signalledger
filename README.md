@@ -8,7 +8,7 @@ People often know they are overwhelmed before they know how to explain it. EchoR
 
 ## Architecture
 
-The production path uses the Strands Agents SDK with an AWS Bedrock model. The Vue client sends conversation turns to the Python service in `agent/`. The service owns the safety prompt and report schema, then returns the agent response. See [`docs/architecture.mmd`](docs/architecture.mmd) and [`docs/testing.md`](docs/testing.md).
+The production path uses the Strands Agents SDK with Tencent Hunyuan's OpenAI-compatible endpoint. The Vue client sends conversation turns to the Python service in `agent/`. The service owns the safety prompt and report schema, then returns the agent response. Bedrock remains an optional provider. See [`docs/architecture.mmd`](docs/architecture.mmd) and [`docs/testing.md`](docs/testing.md).
 
 ## Local development
 
@@ -23,7 +23,7 @@ Without `VITE_AGENT_API_URL`, the browser uses a clearly scoped deterministic fa
 
 ### Strands agent mode
 
-Requirements: Python 3.10+, AWS credentials with Bedrock model access, and a model available in your region.
+Requirements: Python 3.10+, a Tencent Hunyuan API key, and an enabled model. An AWS account and Builder ID are still required by the hackathon; Bedrock credentials are optional for this implementation.
 
 ```bash
 cd agent
@@ -40,7 +40,7 @@ In another terminal:
 VITE_AGENT_API_URL=http://127.0.0.1:8787 npm run dev
 ```
 
-The service exposes `GET /health`, `POST /api/chat`, and `POST /api/report`. No secret is placed in the frontend bundle. For deployment, put credentials in the server environment or an AWS-managed secret store; never commit them.
+The service exposes `GET /health`, `POST /api/chat`, and `POST /api/report`. No secret is placed in the frontend bundle. For deployment, put the Tencent key in the server environment or a managed secret store; never commit it.
 
 ## Verification
 

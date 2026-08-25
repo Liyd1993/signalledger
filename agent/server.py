@@ -25,9 +25,20 @@ understanding is unavailable.
 def _agent() -> Any:
     from strands import Agent
 
+    provider = os.getenv("MODEL_PROVIDER", "tencent").lower()
     model_id = os.getenv("BEDROCK_MODEL_ID")
     kwargs: dict[str, Any] = {"system_prompt": SYSTEM_PROMPT}
-    if model_id:
+    if provider == "tencent":
+        from strands.models.openai import OpenAIModel
+
+        api_key = os.getenv("TENCENT_API_KEY") or os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise RuntimeError("TENCENT_API_KEY is required when MODEL_PROVIDER=tencent")
+        kwargs["model"] = OpenAIModel(
+            client_args={"api_key": api_key, "base_url": os.getenv("TENCENT_BASE_URL", "https://api.hunyuan.cloud.tencent.com/v1")},
+            model_id=os.getenv("TENCENT_MODEL_ID", "hunyuan-turbos-latest"),
+        )
+    elif model_id:
         kwargs["model"] = model_id
     return Agent(**kwargs)
 
