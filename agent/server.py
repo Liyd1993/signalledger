@@ -132,6 +132,23 @@ def _invoke(agent: Any, prompt: str, timeout: float = 20) -> str:
         executor.shutdown(wait=False, cancel_futures=True)
 
 
+def _fallback_reply(text: str) -> str:
+    if any(word in text for word in ("难受", "难过", "痛苦", "崩溃")):
+        return "听起来你现在真的很不好受。我先不急着给建议，想陪你把这份难受放在这里：最近发生了什么，让这种感觉变得这么重？"
+    if any(word in text for word in ("累", "疲惫", "压力")):
+        return "这段时间好像把你压得有点累了。先不用急着解决全部，最让你消耗的，是哪一件事？"
+    return "我听见你了。我们可以从你刚刚这句话开始，慢慢看看此刻最需要被理解的部分。"
+
+
+def _quality_checked(response: str, user_text: str) -> str:
+    compact = response.replace(" ", "")
+    if not response or compact.count(user_text.replace(" ", "")) > 1:
+        return _fallback_reply(user_text)
+    if "我听见你在问我是谁" in response and not any(word in user_text for word in ("你是谁", "你叫什么", "名字")):
+        return _fallback_reply(user_text)
+    return response
+
+
 def chat(payload: dict[str, Any]) -> dict[str, str]:
     text = str(payload.get("text", "")).strip()
     if not text:
@@ -153,7 +170,8 @@ def chat(payload: dict[str, Any]) -> dict[str, str]:
     try:
         response = _invoke(_agent(conversation_prompt), conversation_input)
     except Exception:
-        response = "我听见你在问我是谁。我叫小野，会用心理学视角陪你梳理感受和现实困扰，但不会替代专业医疗或心理治疗。"
+        response = _fallback_reply(text)
+    response = _quality_checked(response, text)
     # Keep a private, local conversation trace even when the model chooses not
     # to call the optional save_memory tool; retrieval remains model-driven.
     save_memory(f"用户表达：{text}")
