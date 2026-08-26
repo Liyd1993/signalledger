@@ -100,7 +100,7 @@ def _agent(system_prompt: str = SYSTEM_PROMPT) -> Any:
 
         kwargs["model"] = OllamaModel(
             host=os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434"),
-            model_id=os.getenv("OLLAMA_MODEL_ID", "gemma4:12b"),
+            model_id=os.getenv("OLLAMA_MODEL_ID", "deepseek-r1:1.5b"),
             max_tokens=int(os.getenv("OLLAMA_MAX_TOKENS", "512")),
         )
     elif provider == "tencent":

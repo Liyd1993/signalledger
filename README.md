@@ -31,7 +31,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-ollama pull gemma4:12b
+ollama pull deepseek-r1:1.5b
 ollama serve
 python3 server.py
 ```
