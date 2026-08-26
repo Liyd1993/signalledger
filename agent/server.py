@@ -155,6 +155,8 @@ def chat(payload: dict[str, Any]) -> dict[str, str]:
         raise ValueError("text is required")
     if any(keyword in text for keyword in ("你是谁", "你叫什么", "名字是什么")):
         return {"text": "我叫小野，是你的心理支持陪伴者。我会用心理学视角陪你梳理感受和现实困扰，但不会替代专业医疗或心理治疗。"}
+    if len(text) <= 8 and any(word in text for word in ("难受", "难过", "痛苦", "崩溃", "累", "疲惫")):
+        return {"text": _fallback_reply(text)}
     context = payload.get("context", [])
     memories = retrieve_memories(text)
     history = json.dumps(context, ensure_ascii=False)
