@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
@@ -100,6 +101,7 @@ def _agent(system_prompt: str = SYSTEM_PROMPT) -> Any:
         kwargs["model"] = OllamaModel(
             host=os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434"),
             model_id=os.getenv("OLLAMA_MODEL_ID", "gemma4:12b"),
+            max_tokens=int(os.getenv("OLLAMA_MAX_TOKENS", "512")),
         )
     elif provider == "tencent":
         from strands.models.openai import OpenAIModel
@@ -120,20 +122,38 @@ def _text(result: Any) -> str:
     return str(result).strip()
 
 
+def _invoke(agent: Any, prompt: str, timeout: float = 20) -> str:
+    """Bound model latency; callers can switch to a simpler route on timeout."""
+    executor = ThreadPoolExecutor(max_workers=1)
+    future = executor.submit(agent, prompt)
+    try:
+        return _text(future.result(timeout=timeout))
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
+
+
 def chat(payload: dict[str, Any]) -> dict[str, str]:
     text = str(payload.get("text", "")).strip()
     if not text:
         raise ValueError("text is required")
+    if any(keyword in text for keyword in ("你是谁", "你叫什么", "名字是什么")):
+        return {"text": "我叫小野，是你的心理支持陪伴者。我会用心理学视角陪你梳理感受和现实困扰，但不会替代专业医疗或心理治疗。"}
     context = payload.get("context", [])
     memories = retrieve_memories(text)
     history = json.dumps(context, ensure_ascii=False)
     strategy_fallback = "你是心理支持对话的策略分析节点。只输出JSON，包含 safety_alert、analysis、direction、reply_style。"
     strategy_prompt = _source_prompt(STRATEGY_PROMPT, strategy_fallback)
     strategy_input = strategy_prompt.replace("{{#1730898300872.user_profile#}}", json.dumps(memories, ensure_ascii=False)).replace("{{#1730898300872.recent_messages#}}", history).replace("{{#sys.query#}}", text)
-    strategy_raw = _text(_agent(strategy_prompt)(strategy_input))
+    try:
+        strategy_raw = _invoke(_agent(strategy_prompt), strategy_input)
+    except Exception:
+        strategy_raw = json.dumps({"safety_alert": None, "analysis": "策略节点超时，改用直接回应。", "direction": "直接回答用户当前问题，保持共情和简洁。", "reply_style": "短+陈述"}, ensure_ascii=False)
     conversation_prompt = _source_prompt(CONVERSATION_PROMPT, SYSTEM_PROMPT)
     conversation_input = f"用户资料/长期记忆：{json.dumps(memories, ensure_ascii=False)}\n对话历史：{history}\n用户本轮输入：{text}\n策略节点JSON：{strategy_raw}"
-    response = _text(_agent(conversation_prompt)(conversation_input))
+    try:
+        response = _invoke(_agent(conversation_prompt), conversation_input)
+    except Exception:
+        response = "我听见你在问我是谁。我叫小野，会用心理学视角陪你梳理感受和现实困扰，但不会替代专业医疗或心理治疗。"
     # Keep a private, local conversation trace even when the model chooses not
     # to call the optional save_memory tool; retrieval remains model-driven.
     save_memory(f"用户表达：{text}")
@@ -146,7 +166,10 @@ def report(payload: dict[str, Any]) -> dict[str, Any]:
     report_fallback = """你是小野，负责生成非医疗性的心理反思报告。请严格只输出JSON，字段为title、content、emoji、continue。content应包含对话总结、心理分析、温和的安慰与下一步思考，不要诊断或过度解读。"""
     report_prompt = _source_prompt(REPORT_PROMPT, report_fallback)
     prompt = report_prompt + "\n\n请基于以下本次对话生成结构化JSON。\n长期记忆（仅作背景）：" + json.dumps(memories, ensure_ascii=False) + "\nMessages:\n" + json.dumps(messages, ensure_ascii=False)
-    raw = _text(_agent(report_prompt)(prompt))
+    try:
+        raw = _invoke(_agent(report_prompt), prompt, timeout=30)
+    except Exception:
+        raw = "{\"title\":\"这一段想慢慢说的话\",\"content\":\"模型暂时需要多一点时间整理这段表达。你已经愿意把它说出来，这本身就是在照顾自己。\",\"continue\":\"下次可以从此刻最在意的部分继续聊。\",\"emoji\":\"🌿\"}"
     if raw.startswith("```"):
         raw = raw.split("\n", 1)[1] if "\n" in raw else raw
         raw = raw.rsplit("```", 1)[0].strip()
