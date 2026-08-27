@@ -31,9 +31,10 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
+ollama pull deepseek-r1:7b
 ollama pull deepseek-r1:1.5b
 ollama serve
-python3 server.py
+MODEL_PROVIDER=ollama OLLAMA_MODEL_ID=deepseek-r1:7b OLLAMA_STRATEGY_MODEL_ID=deepseek-r1:1.5b python3 server.py
 ```
 
 In another terminal:

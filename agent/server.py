@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -24,6 +25,13 @@ SYSTEM_PROMPT = """你叫小野，是 EchoReport 中温和、专业的心理支�
 这是一个受约束的 ReAct 流程：先调用 retrieve_memory，再基于观察结果回应；
 如果用户表达了稳定、未来仍有价值的偏好或经历，调用 save_memory 保存一句简短事实。
 """
+
+DEEPSEEK_DIALOGUE_PROMPT = """你叫小野，23岁，心理学研究生，是温暖、自然的心理支持与人生教练陪伴者。
+你提供非医疗支持，不诊断、不贴标签、不声称替代心理治疗。像和好朋友聊天：短句、口语化、具体，
+不用“根据你的描述”“感谢分享”等AI腔，不空洞鼓励，不编造自己的经历，不列表。
+严格先回应用户刚说的话，再向前推进一步。用户问实际问题就直接回答；用户表达情绪就接住具体处境，
+不猜原因、不急着给建议，再问一个贴近原话、容易回答的问题。每轮只问一个问题，只输出简体中文。
+如出现正在发生的自伤或伤人风险，鼓励立即联系当地紧急服务或可信任的人，并停止普通反思对话。"""
 
 MEMORY_DB = Path(os.getenv("ECHOREPORT_MEMORY_DB", Path(__file__).with_name("memory.db")))
 PROMPT_ROOT = Path("/Volumes/文档/公司/赛尔教育/心澄 Prompt/提示词/04_当前活跃提示词")
@@ -44,6 +52,17 @@ def _source_prompt(path: Path, fallback: str) -> str:
         return fallback
 
 
+def _render_prompt(template: str, memories: list[str], history: str, text: str, strategy: str = "") -> str:
+    return (
+        template
+        .replace("{{#1730898300872.user_profile#}}", json.dumps(memories, ensure_ascii=False))
+        .replace("{{#1730898300872.camp_topic#}}", "")
+        .replace("{{#1730898300872.recent_messages#}}", history)
+        .replace("{{#sys.query#}}", text)
+        .replace("{{#1775003372701.text#}}", strategy)
+    )
+
+
 def _memory_connection() -> sqlite3.Connection:
     connection = sqlite3.connect(MEMORY_DB)
     connection.execute("CREATE TABLE IF NOT EXISTS memories (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, note TEXT NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP)")
@@ -55,10 +74,10 @@ def retrieve_memories(query: str, user_id: str = "local-user") -> list[str]:
     connection = _memory_connection()
     try:
         if not terms:
-            rows = connection.execute("SELECT note FROM memories WHERE user_id = ? ORDER BY id DESC LIMIT 5", (user_id,)).fetchall()
+            rows = connection.execute("SELECT note FROM memories WHERE user_id = ? AND note NOT LIKE '用户表达：%' ORDER BY id DESC LIMIT 5", (user_id,)).fetchall()
         else:
             pattern = "%" + "%".join(terms) + "%"
-            rows = connection.execute("SELECT note FROM memories WHERE user_id = ? AND note LIKE ? ORDER BY id DESC LIMIT 5", (user_id, pattern)).fetchall()
+            rows = connection.execute("SELECT note FROM memories WHERE user_id = ? AND note NOT LIKE '用户表达：%' AND note LIKE ? ORDER BY id DESC LIMIT 5", (user_id, pattern)).fetchall()
         return [str(row[0]) for row in rows]
     finally:
         connection.close()
@@ -94,15 +113,18 @@ def _agent(system_prompt: str = SYSTEM_PROMPT) -> Any:
         """Save one concise, non-sensitive fact that may help future conversations."""
         return save_memory(note)
 
-    kwargs["tools"] = [retrieve_memory, save_memory_tool]
     if provider == "ollama":
         from strands.models.ollama import OllamaModel
 
+        ollama_model_id = os.getenv("OLLAMA_MODEL_ID", "deepseek-r1:7b")
         kwargs["model"] = OllamaModel(
             host=os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434"),
-            model_id=os.getenv("OLLAMA_MODEL_ID", "deepseek-r1:1.5b"),
+            model_id=ollama_model_id,
             max_tokens=int(os.getenv("OLLAMA_MAX_TOKENS", "512")),
+            options={"num_ctx": int(os.getenv("OLLAMA_CONTEXT_WINDOW", "32768"))},
         )
+        if not ollama_model_id.startswith("deepseek-r1"):
+            kwargs["tools"] = [retrieve_memory, save_memory_tool]
     elif provider == "tencent":
         from strands.models.openai import OpenAIModel
 
@@ -113,6 +135,7 @@ def _agent(system_prompt: str = SYSTEM_PROMPT) -> Any:
             client_args={"api_key": api_key, "base_url": os.getenv("TENCENT_BASE_URL", "https://api.lkeap.cloud.tencent.com/plan/v3")},
             model_id=os.getenv("TENCENT_MODEL_ID", "hy3"),
         )
+        kwargs["tools"] = [retrieve_memory, save_memory_tool]
     elif model_id:
         kwargs["model"] = model_id
     return Agent(**kwargs)
@@ -132,6 +155,110 @@ def _invoke(agent: Any, prompt: str, timeout: float = 20) -> str:
         executor.shutdown(wait=False, cancel_futures=True)
 
 
+def _is_deepseek_ollama() -> bool:
+    return os.getenv("MODEL_PROVIDER", "tencent").lower() == "ollama" and os.getenv(
+        "OLLAMA_MODEL_ID", "deepseek-r1:7b"
+    ).startswith("deepseek-r1")
+
+
+def _ollama_generate(
+    system_prompt: str,
+    prompt: str,
+    timeout: float = 45,
+    response_schema: dict[str, Any] | None = None,
+    model_id: str | None = None,
+) -> str:
+    """Call DeepSeek through Ollama's compatible generation endpoint.
+
+    The local DeepSeek distills do not expose native tool calling, so Strands
+    performs the memory/strategy orchestration and this endpoint performs the
+    final model generation without silently falling back to canned copy.
+    """
+    request_data: dict[str, Any] = {
+        "model": model_id or os.getenv("OLLAMA_MODEL_ID", "deepseek-r1:7b"),
+        "system": system_prompt,
+        "prompt": prompt,
+        "stream": False,
+        "think": False,
+        "options": {
+            "temperature": float(os.getenv("OLLAMA_TEMPERATURE", "0.6")),
+            "num_ctx": int(os.getenv("OLLAMA_CONTEXT_WINDOW", "32768")),
+            "num_predict": int(os.getenv("OLLAMA_MAX_TOKENS", "512")),
+        },
+    }
+    if response_schema:
+        request_data["format"] = response_schema
+    body = json.dumps(
+        request_data,
+        ensure_ascii=False,
+    ).encode("utf-8")
+    request = urllib.request.Request(
+        os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434") + "/api/generate",
+        data=body,
+        headers={"Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        result = json.load(response)
+    return str(result.get("response", "")).strip()
+
+
+def _deepseek_reply(system_prompt: str, text: str, strategy: str) -> str:
+    schema = {
+        "type": "object",
+        "properties": {
+            "response": {
+                "type": "string",
+                "minLength": 8,
+                "maxLength": 120,
+                "description": "必填。一到两句具体接住用户当下处境，不复述原话，不猜原因，不包含问题",
+            },
+            "question": {
+                "type": "string",
+                "minLength": 6,
+                "maxLength": 60,
+                "description": "只含一个具体问句，用第二人称‘你’，避免追问为什么，不使用‘她’",
+            },
+        },
+        "required": ["response", "question"],
+    }
+    prompt = f"""现在完成本轮最终回复。
+用户本轮原话：{text}
+策略节点结果：{strategy}
+response 写一到两句直接回应用户的话；question 只写一个贴近用户原话、容易回答的问题。不得输出分析、方向、标题、列表、角色介绍、诊断或回应示例。"""
+    prompt += " 不要说‘你说得对’，不要声称自己有相同经历，也不要编造用户没说过的事实。"
+    raw = _ollama_generate(system_prompt, prompt, response_schema=schema)
+    data = json.loads(raw)
+    response = str(data.get("response", "")).strip()
+    question = str(data.get("question", "")).strip()
+    if response.startswith(text):
+        response = response[len(text):].lstrip("，。！？：: \n")
+    if "？" in response and question:
+        response = response.split("？", 1)[0]
+        if "。" in response:
+            response = response.rsplit("。", 1)[0] + "。"
+    question = question.replace("让她", "让你").replace("她感到", "你感到")
+    return "\n".join(part for part in (response, question) if part)
+
+
+def _deepseek_strategy(text: str, memories: list[str], history: str) -> str:
+    schema = {
+        "type": "object",
+        "properties": {
+            "analysis": {"type": "string", "maxLength": 120},
+            "direction": {"type": "string", "maxLength": 80},
+            "reply_style": {"type": "string", "enum": ["短", "中"]},
+        },
+        "required": ["analysis", "direction", "reply_style"],
+    }
+    prompt = f"长期记忆：{json.dumps(memories, ensure_ascii=False)}\n对话历史：{history}\n用户本轮输入：{text}"
+    return _ollama_generate(
+        "你是小野的心理支持对话策略节点。只理解用户当前需要并给出回应方向，不诊断、不直接回复用户。",
+        prompt,
+        response_schema=schema,
+        model_id=os.getenv("OLLAMA_STRATEGY_MODEL_ID", "deepseek-r1:1.5b"),
+    )
+
+
 def _fallback_reply(text: str) -> str:
     if any(word in text for word in ("难受", "难过", "痛苦", "崩溃")):
         return "听起来你现在真的很不好受。我先不急着给建议，想陪你把这份难受放在这里：最近发生了什么，让这种感觉变得这么重？"
@@ -140,11 +267,28 @@ def _fallback_reply(text: str) -> str:
     return "我听见你了。我们可以从你刚刚这句话开始，慢慢看看此刻最需要被理解的部分。"
 
 
+def _clean_model_reply(response: str) -> str:
+    """Keep the user-facing reply when a reasoning model adds meta sections."""
+    clean = response.strip()
+    if "<reply>" in clean and "</reply>" in clean:
+        clean = clean.split("<reply>", 1)[1].split("</reply>", 1)[0].strip()
+    elif "### 回复：" in clean:
+        clean = clean.split("### 回复：", 1)[1].split("\n### ", 1)[0].strip()
+    elif "**回复：**" in clean:
+        clean = clean.split("**回复：**", 1)[1].split("\n**", 1)[0].strip()
+    for prefix in ("回复：", "回答："):
+        if clean.startswith(prefix):
+            clean = clean[len(prefix):].strip()
+    return clean
+
+
 def _quality_checked(response: str, user_text: str) -> str:
     compact = response.replace(" ", "")
     if not response or compact.count(user_text.replace(" ", "")) > 1:
         return _fallback_reply(user_text)
     if "我听见你在问我是谁" in response and not any(word in user_text for word in ("你是谁", "你叫什么", "名字")):
+        return _fallback_reply(user_text)
+    if "{{#" in response or "#1775003372701" in response or response.lstrip().startswith("{"):
         return _fallback_reply(user_text)
     return response
 
@@ -155,29 +299,39 @@ def chat(payload: dict[str, Any]) -> dict[str, str]:
         raise ValueError("text is required")
     if any(keyword in text for keyword in ("你是谁", "你叫什么", "名字是什么")):
         return {"text": "我叫小野，是你的心理支持陪伴者。我会用心理学视角陪你梳理感受和现实困扰，但不会替代专业医疗或心理治疗。"}
-    if len(text) <= 8 and any(word in text for word in ("难受", "难过", "痛苦", "崩溃", "累", "疲惫")):
-        return {"text": _fallback_reply(text)}
     context = payload.get("context", [])
     memories = retrieve_memories(text)
     history = json.dumps(context, ensure_ascii=False)
     strategy_fallback = "你是心理支持对话的策略分析节点。只输出JSON，包含 safety_alert、analysis、direction、reply_style。"
-    strategy_prompt = _source_prompt(STRATEGY_PROMPT, strategy_fallback)
-    strategy_input = strategy_prompt.replace("{{#1730898300872.user_profile#}}", json.dumps(memories, ensure_ascii=False)).replace("{{#1730898300872.recent_messages#}}", history).replace("{{#sys.query#}}", text)
+    strategy_prompt = _render_prompt(_source_prompt(STRATEGY_PROMPT, strategy_fallback), memories, history, text)
+    strategy_input = "请严格按照系统提示，只输出本轮策略JSON。"
     try:
-        strategy_raw = _invoke(_agent(strategy_prompt), strategy_input)
-    except Exception:
+        strategy_raw = (
+            _deepseek_strategy(text, memories, history)
+            if _is_deepseek_ollama()
+            else _invoke(_agent(strategy_prompt), strategy_input)
+        )
+    except Exception as exc:
+        print(f"strategy fallback: {exc!r}", flush=True)
         strategy_raw = json.dumps({"safety_alert": None, "analysis": "策略节点超时，改用直接回应。", "direction": "直接回答用户当前问题，保持共情和简洁。", "reply_style": "短+陈述"}, ensure_ascii=False)
-    conversation_prompt = _source_prompt(CONVERSATION_PROMPT, SYSTEM_PROMPT)
-    conversation_input = f"用户资料/长期记忆：{json.dumps(memories, ensure_ascii=False)}\n对话历史：{history}\n用户本轮输入：{text}\n策略节点JSON：{strategy_raw}"
+    conversation_prompt = _render_prompt(_source_prompt(CONVERSATION_PROMPT, SYSTEM_PROMPT), memories, history, text, strategy_raw)
+    conversation_input = "请严格按照系统提示，直接输出给用户的本轮回复。"
     try:
-        response = _invoke(_agent(conversation_prompt), conversation_input)
-    except Exception:
+        response = (
+            _deepseek_reply(DEEPSEEK_DIALOGUE_PROMPT, text, strategy_raw)
+            if _is_deepseek_ollama()
+            else _invoke(_agent(conversation_prompt), conversation_input)
+        )
+    except Exception as exc:
+        print(f"conversation fallback: {exc!r}", flush=True)
         response = _fallback_reply(text)
+    response = _clean_model_reply(response)
     response = _quality_checked(response, text)
-    # Keep a private, local conversation trace even when the model chooses not
-    # to call the optional save_memory tool; retrieval remains model-driven.
-    save_memory(f"用户表达：{text}")
-    return {"text": response}
+    return {
+        "text": response,
+        "model": os.getenv("OLLAMA_MODEL_ID", os.getenv("TENCENT_MODEL_ID", "unknown")),
+        "generatedBy": "ollama-deepseek" if _is_deepseek_ollama() else "strands-agent",
+    }
 
 
 def report(payload: dict[str, Any]) -> dict[str, Any]:
@@ -223,7 +377,14 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         if self.path == "/health":
-            self._send(200, {"ok": True, "service": "echoreport-strands"})
+            self._send(200, {
+                "ok": True,
+                "service": "echoreport-strands",
+                "provider": os.getenv("MODEL_PROVIDER", "tencent"),
+                "model": os.getenv("OLLAMA_MODEL_ID", os.getenv("TENCENT_MODEL_ID", "deepseek-r1:7b")),
+                "strategyModel": os.getenv("OLLAMA_STRATEGY_MODEL_ID", "deepseek-r1:1.5b") if _is_deepseek_ollama() else None,
+                "orchestration": "external-react" if os.getenv("OLLAMA_MODEL_ID", "").startswith("deepseek-r1") else "native-tools",
+            })
             return
         self._send(404, {"error": "not found"})
 
